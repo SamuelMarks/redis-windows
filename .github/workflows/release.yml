@@ -1,0 +1,76 @@
+name: Build and Release Redis for Windows
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      redis_version:
+        description: 'Redis upstream tag/branch to build (e.g. 7.2.4)'
+        required: true
+        default: 'unstable'
+
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+      - name: Checkout redis-windows (Overlay & Patches)
+        uses: actions/checkout@v4
+        with:
+          path: build-repo
+
+      - name: Checkout upstream Redis
+        uses: actions/checkout@v4
+        with:
+          repository: redis/redis
+          ref: \${{ github.event.inputs.redis_version || github.ref_name }}\
+          path: redis-src
+
+      - name: Apply Overlay
+        run: Copy-Item -Recurse -Force build-repo\overlay\* redis-src\
+        shell: pwsh
+
+      - name: Apply Patches
+        run: |
+          cd redis-src
+          foreach ($patch in Get-ChildItem ../build-repo/patches/*.patch) {
+            git apply --reject "$patch"
+          }
+        shell: pwsh
+
+      - name: Configure CMake
+        run: cmake -B redis-src/build -S redis-src -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build Redis
+        run: cmake --build redis-src/build --config Release
+
+      - name: Create Packages
+        run: |
+          cd redis-src/build
+          cpack -G WIX -C Release
+          cpack -G ZIP -C Release
+        shell: pwsh
+
+      - name: Package Service Wrapper
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/winsw/winsw/releases/download/v2.12.0/WinSW-x64.exe" -OutFile redis-src/build/redis-service.exe
+          Copy-Item build-repo/service/redis-service.xml redis-src/build/
+          Compress-Archive -Path redis-src/build/redis-service.exe, redis-src/build/redis-service.xml -DestinationPath redis-src/build/Redis-Service-Wrapper.zip
+        shell: pwsh
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Redis-Windows-Binaries
+          path: |
+            redis-src/build/*.msi
+            redis-src/build/*.zip
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            redis-src/build/*.msi
+            redis-src/build/*.zip

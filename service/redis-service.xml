@@ -1,0 +1,9 @@
+<service>
+  <id>Redis</id>
+  <name>Redis Server</name>
+  <description>Redis in-memory data structure store</description>
+  <executable>%BASE%\redis-server.exe</executable>
+  <arguments>redis.conf</arguments>
+  <log mode="roll"></log>
+  <onfailure action="restart" delay="10 sec"/>
+</service>
