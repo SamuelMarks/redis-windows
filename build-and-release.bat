@@ -2,23 +2,33 @@
 setlocal EnableDelayedExpansion
 
 if "%~1"=="" (
-    echo Usage: %0 ^<tag^> [project] [--local-only]
+    echo Usage: %0 ^<tag^> [project] [--local-only] [--hash ^<git-hash^>]
     echo Example: %0 unstable redis
     echo Example: %0 8.0.0 valkey --local-only
+    echo Example: %0 8.0.0 redis --hash a1b2c3d
     exit /b 1
 )
 
 set TAG=%~1
-set PROJECT=%~2
+set PROJECT=redis
 set LOCAL_ONLY=0
+set GIT_HASH=
 
-if "%PROJECT%"=="--local-only" (
-    set PROJECT=redis
+:parse_args
+shift
+if "%~1"=="" goto end_parse_args
+if "%~1"=="--local-only" (
     set LOCAL_ONLY=1
-) else if "%~3"=="--local-only" (
-    set LOCAL_ONLY=1
+    goto parse_args
 )
-if "%PROJECT%"=="" set PROJECT=redis
+if "%~1"=="--hash" (
+    set GIT_HASH=%~2
+    shift
+    goto parse_args
+)
+set PROJECT=%~1
+goto parse_args
+:end_parse_args
 
 set REPO_DIR=%~dp0
 set WORK_DIR=%REPO_DIR%build_work
@@ -40,19 +50,33 @@ if /i "%PROJECT%"=="redis" (
     set REPO_URL=https://github.com/valkey-io/valkey.git
 )
 
-git clone --branch %TAG% --depth 1 %REPO_URL% "%SRC_DIR%"
-if errorlevel 1 (
-    echo Failed to clone %PROJECT% at tag %TAG%
-    exit /b 1
+if not "%GIT_HASH%"=="" (
+    echo Fetching full repository to checkout hash: %GIT_HASH%
+    git clone %REPO_URL% "%SRC_DIR%"
+    if errorlevel 1 (
+        echo Failed to clone %PROJECT%
+        exit /b 1
+    )
+    cd /d "%SRC_DIR%"
+    git checkout %GIT_HASH%
+    if errorlevel 1 (
+        echo Failed to checkout hash %GIT_HASH%
+        exit /b 1
+    )
+) else (
+    git clone --branch %TAG% --depth 1 %REPO_URL% "%SRC_DIR%"
+    if errorlevel 1 (
+        echo Failed to clone %PROJECT% at tag %TAG%
+        exit /b 1
+    )
+    cd /d "%SRC_DIR%"
 )
-
-cd /d "%SRC_DIR%"
 
 echo [2/5] Applying overlay and patches...
 xcopy /E /I /Y "%REPO_DIR%overlay\*" . >nul
 
 for %%f in ("%REPO_DIR%patches\*.patch") do (
-    git apply --reject "%%f"
+    git apply --ignore-whitespace --reject "%%f"
     if errorlevel 1 (
         echo Failed to apply patch %%f
         exit /b 1
@@ -85,21 +109,21 @@ cpack -G ZIP -C Release
 cd ..
 
 echo [3/5] Running E2E Tests...
-set SERVER_EXE=build\Release\%PROJECT%-server.exe
-set CLI_EXE=build\Release\%PROJECT%-cli.exe
+set SERVER_EXE=build\bin\Release\%PROJECT%-server.exe
+set CLI_EXE=build\bin\Release\%PROJECT%-cli.exe
 
 if not exist "%SERVER_EXE%" (
-    set SERVER_EXE=build\%PROJECT%-server.exe
-    set CLI_EXE=build\%PROJECT%-cli.exe
+    set SERVER_EXE=build\bin\%PROJECT%-server.exe
+    set CLI_EXE=build\bin\%PROJECT%-cli.exe
 )
 
 if not exist "%SERVER_EXE%" (
     :: Fallback to redis-server.exe if project is valkey but binary is still redis
-    set SERVER_EXE=build\Release\redis-server.exe
-    set CLI_EXE=build\Release\redis-cli.exe
+    set SERVER_EXE=build\bin\Release\redis-server.exe
+    set CLI_EXE=build\bin\Release\redis-cli.exe
     if not exist "!SERVER_EXE!" (
-        set SERVER_EXE=build\redis-server.exe
-        set CLI_EXE=build\redis-cli.exe
+        set SERVER_EXE=build\bin\redis-server.exe
+        set CLI_EXE=build\bin\redis-cli.exe
     )
 )
 

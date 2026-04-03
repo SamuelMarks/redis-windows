@@ -1,0 +1,33 @@
+# EditorConfig is awesome: https://EditorConfig.org
+
+# top-most EditorConfig file
+root = true
+
+# Unix-style newlines and UTF-8 encoding by default
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+# Windows batch and PowerShell scripts
+[*.{bat,cmd,ps1}]
+end_of_line = crlf
+
+# Patches
+# CRITICAL: Trailing whitespace is often meaningful in diff context lines.
+# Stripping it corrupts the patch.
+[*.patch]
+trim_trailing_whitespace = false
+insert_final_newline = false
+
+# Markdown
+# Trailing whitespace can mean a hard line break in standard markdown.
+[*.md]
+trim_trailing_whitespace = false
+
+# YAML files (GitHub Actions workflows)
+[*.{yml,yaml}]
+indent_size = 2

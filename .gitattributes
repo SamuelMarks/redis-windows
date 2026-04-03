@@ -1,0 +1,23 @@
+# Set default behavior to automatically normalize line endings
+* text=auto
+
+# Windows scripts require CRLF to execute properly
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Shell scripts require LF
+*.sh text eol=lf
+
+# Patches should strictly maintain LF (to match the Redis/Valkey upstream)
+# and avoid unintended whitespace conversions.
+*.patch text eol=lf
+
+# Configuration and workflows
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+
+# Build configuration files
+CMakeLists.txt text eol=lf
+*.cmake text eol=lf

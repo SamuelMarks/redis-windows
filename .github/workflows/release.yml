@@ -75,7 +75,7 @@ jobs:
         run: |
           cd src
           foreach ($patch in Get-ChildItem ../build-repo/patches/*.patch) {
-            git apply --reject "$patch"
+            git apply --ignore-whitespace --reject "$patch"
           }
         shell: pwsh
 
@@ -107,21 +107,21 @@ jobs:
       - name: Run E2E Tests
         run: |
           cd src
-          $SERVER_EXE = "build\Release\${{ env.PROJECT }}-server.exe"
-          $CLI_EXE = "build\Release\${{ env.PROJECT }}-cli.exe"
+          $SERVER_EXE = "build\bin\Release\${{ env.PROJECT }}-server.exe"
+          $CLI_EXE = "build\bin\Release\${{ env.PROJECT }}-cli.exe"
           
           if (-Not (Test-Path $SERVER_EXE)) {
-              $SERVER_EXE = "build\${{ env.PROJECT }}-server.exe"
-              $CLI_EXE = "build\${{ env.PROJECT }}-cli.exe"
+              $SERVER_EXE = "build\bin\${{ env.PROJECT }}-server.exe"
+              $CLI_EXE = "build\bin\${{ env.PROJECT }}-cli.exe"
           }
           
           if (-Not (Test-Path $SERVER_EXE)) {
-              $SERVER_EXE = "build\Release\redis-server.exe"
-              $CLI_EXE = "build\Release\redis-cli.exe"
+              $SERVER_EXE = "build\bin\Release\redis-server.exe"
+              $CLI_EXE = "build\bin\Release\redis-cli.exe"
           }
           if (-Not (Test-Path $SERVER_EXE)) {
-              $SERVER_EXE = "build\redis-server.exe"
-              $CLI_EXE = "build\redis-cli.exe"
+              $SERVER_EXE = "build\bin\redis-server.exe"
+              $CLI_EXE = "build\bin\redis-cli.exe"
           }
           
           if (-Not (Test-Path $SERVER_EXE)) {
