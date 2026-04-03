@@ -45,7 +45,64 @@ ln -sf \$1 \$2")
 
 if (WIN32)
     message(STATUS "Adding target package for Windows")
-    set(CPACK_GENERATOR "ZIP;WIX")
+
+    # Download Windows Service Wrapper
+    if(NOT EXISTS "${CMAKE_BINARY_DIR}/redis-service.exe")
+        file(DOWNLOAD "https://github.com/winsw/winsw/releases/download/v2.12.0/WinSW-x64.exe" 
+             "${CMAKE_BINARY_DIR}/redis-service.exe" SHOW_PROGRESS)
+    endif()
+
+    # Look for redis-service.xml
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../build-repo/service/redis-service.xml")
+        file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/../build-repo/service/redis-service.xml" DESTINATION "${CMAKE_BINARY_DIR}")
+    else()
+        file(WRITE "${CMAKE_BINARY_DIR}/redis-service.xml"
+"<service>
+  <id>Redis</id>
+  <name>Redis Server</name>
+  <description>Redis in-memory data structure store</description>
+  <executable>%BASE%\\redis-server.exe</executable>
+  <arguments>redis.conf</arguments>
+  <log mode=\"roll\"></log>
+  <onfailure action=\"restart\" delay=\"10 sec\"/>
+</service>
+")
+    endif()
+
+    install(PROGRAMS "${CMAKE_BINARY_DIR}/redis-service.exe" DESTINATION bin)
+    install(FILES "${CMAKE_BINARY_DIR}/redis-service.xml" DESTINATION bin)
+
+    set(CPACK_GENERATOR "ZIP;WIX;NSIS")
     set(CPACK_PACKAGE_INSTALL_DIRECTORY "Redis")
     set(CPACK_WIX_UPGRADE_GUID "5E12E119-BEB5-4D05-8A5E-2A47CC31E3AC")
+
+    # For NSIS: register the service during install
+    set(CPACK_NSIS_EXTRA_INSTALL_COMMANDS "
+        ExecWait '\\\"$INSTDIR\\\\bin\\\\redis-service.exe\\\" install'
+        ExecWait '\\\"$INSTDIR\\\\bin\\\\redis-service.exe\\\" start'
+    ")
+    set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "
+        ExecWait '\\\"$INSTDIR\\\\bin\\\\redis-service.exe\\\" stop'
+        ExecWait '\\\"$INSTDIR\\\\bin\\\\redis-service.exe\\\" uninstall'
+    ")
+
+    # For WIX: setup custom actions to manage the service
+    file(WRITE "${CMAKE_BINARY_DIR}/wix_patch.xml" "
+<CPackWiXPatch>
+    <CPackWiXFragment Id=\"#PRODUCT\">
+        <CustomAction Id=\"InstallRedisService\" Directory=\"CM_DP_bin\" ExeCommand=\"[CM_DP_bin]redis-service.exe install\" Execute=\"deferred\" Impersonate=\"no\" Return=\"check\" />
+        <CustomAction Id=\"StartRedisService\" Directory=\"CM_DP_bin\" ExeCommand=\"[CM_DP_bin]redis-service.exe start\" Execute=\"deferred\" Impersonate=\"no\" Return=\"check\" />
+        <CustomAction Id=\"StopRedisService\" Directory=\"CM_DP_bin\" ExeCommand=\"[CM_DP_bin]redis-service.exe stop\" Execute=\"deferred\" Impersonate=\"no\" Return=\"ignore\" />
+        <CustomAction Id=\"UninstallRedisService\" Directory=\"CM_DP_bin\" ExeCommand=\"[CM_DP_bin]redis-service.exe uninstall\" Execute=\"deferred\" Impersonate=\"no\" Return=\"ignore\" />
+
+        <InstallExecuteSequence>
+            <Custom Action=\"InstallRedisService\" Before=\"InstallFinalize\">NOT Installed</Custom>
+            <Custom Action=\"StartRedisService\" After=\"InstallRedisService\">NOT Installed</Custom>
+            <Custom Action=\"StopRedisService\" Before=\"RemoveFiles\">REMOVE=\"ALL\"</Custom>
+            <Custom Action=\"UninstallRedisService\" After=\"StopRedisService\">REMOVE=\"ALL\"</Custom>
+        </InstallExecuteSequence>
+    </CPackWiXFragment>
+</CPackWiXPatch>
+")
+    set(CPACK_WIX_PATCH_FILE "${CMAKE_BINARY_DIR}/wix_patch.xml")
 endif()

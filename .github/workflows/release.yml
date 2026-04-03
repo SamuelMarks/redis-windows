@@ -1,76 +1,180 @@
-name: Build and Release Redis for Windows
+﻿name: Build and Release for Windows
 
 on:
   push:
     tags:
       - 'v*'
+  schedule:
+    - cron: '0 0 * * 0'
   workflow_dispatch:
     inputs:
-      redis_version:
-        description: 'Redis upstream tag/branch to build (e.g. 7.2.4)'
+      project:
+        description: 'Project to build (redis or valkey)'
+        required: true
+        default: 'redis'
+        type: choice
+        options:
+          - redis
+          - valkey
+      version:
+        description: 'Upstream tag/branch to build'
         required: true
         default: 'unstable'
 
 jobs:
-  build:
-    runs-on: windows-2022
+  check-upstream:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.check.outputs.should_build }}
+      version: ${{ steps.check.outputs.version }}
     steps:
-      - name: Checkout redis-windows (Overlay & Patches)
+      - name: Check latest upstream release
+        id: check
+        run: |
+          LATEST_UPSTREAM=$(curl -s https://api.github.com/repos/redis/redis/releases/latest | jq -r .tag_name)
+          if [ "$LATEST_UPSTREAM" == "null" ] || [ -z "$LATEST_UPSTREAM" ]; then
+            echo "should_build=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          LATEST_LOCAL=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/repos/${{ github.repository }}/releases/tags/$LATEST_UPSTREAM | jq -r .tag_name)
+          
+          if [ "$LATEST_LOCAL" == "$LATEST_UPSTREAM" ]; then
+            echo "should_build=false" >> $GITHUB_OUTPUT
+          else
+            echo "should_build=true" >> $GITHUB_OUTPUT
+            echo "version=$LATEST_UPSTREAM" >> $GITHUB_OUTPUT
+          fi
+
+  build:
+    needs: [check-upstream]
+    if: always() && (github.event_name == 'workflow_dispatch' || github.event_name == 'push' || (github.event_name == 'schedule' && needs.check-upstream.outputs.should_build == 'true'))
+    runs-on: windows-latest
+    env:
+      PROJECT: ${{ github.event.inputs.project || 'redis' }}
+      VERSION: ${{ github.event.inputs.version || needs.check-upstream.outputs.version || github.ref_name }}
+    steps:
+      - name: Checkout windows build repo (Overlay & Patches)
         uses: actions/checkout@v4
         with:
           path: build-repo
 
-      - name: Checkout upstream Redis
+      - name: Checkout upstream source
         uses: actions/checkout@v4
         with:
-          repository: redis/redis
-          ref: \${{ github.event.inputs.redis_version || github.ref_name }}\
-          path: redis-src
+          repository: ${{ env.PROJECT == 'valkey' && 'valkey-io/valkey' || 'redis/redis' }}
+          ref: ${{ env.VERSION }}
+          path: src
 
       - name: Apply Overlay
-        run: Copy-Item -Recurse -Force build-repo\overlay\* redis-src\
+        run: Copy-Item -Recurse -Force build-repo\overlay\* src\
         shell: pwsh
 
       - name: Apply Patches
         run: |
-          cd redis-src
+          cd src
           foreach ($patch in Get-ChildItem ../build-repo/patches/*.patch) {
             git apply --reject "$patch"
           }
         shell: pwsh
 
       - name: Configure CMake
-        run: cmake -B redis-src/build -S redis-src -DCMAKE_BUILD_TYPE=Release
+        run: |
+          cd src
+          $ErrorActionPreference = "Continue"
+          cmake -G "Visual Studio 18 2026" -A x64 -B build -S . 2> $null
+          if ($LASTEXITCODE -ne 0) {
+              cmake -B build -S .
+              if ($LASTEXITCODE -ne 0) {
+                  Write-Error "CMake configuration failed."
+                  exit 1
+              }
+          }
+        shell: pwsh
 
-      - name: Build Redis
-        run: cmake --build redis-src/build --config Release
+      - name: Build
+        run: cmake --build src/build --config Release
 
       - name: Create Packages
         run: |
-          cd redis-src/build
+          cd src/build
           cpack -G WIX -C Release
+          cpack -G NSIS -C Release
           cpack -G ZIP -C Release
         shell: pwsh
 
-      - name: Package Service Wrapper
+      - name: Run E2E Tests
         run: |
-          Invoke-WebRequest -Uri "https://github.com/winsw/winsw/releases/download/v2.12.0/WinSW-x64.exe" -OutFile redis-src/build/redis-service.exe
-          Copy-Item build-repo/service/redis-service.xml redis-src/build/
-          Compress-Archive -Path redis-src/build/redis-service.exe, redis-src/build/redis-service.xml -DestinationPath redis-src/build/Redis-Service-Wrapper.zip
+          cd src
+          $SERVER_EXE = "build\Release\${{ env.PROJECT }}-server.exe"
+          $CLI_EXE = "build\Release\${{ env.PROJECT }}-cli.exe"
+          
+          if (-Not (Test-Path $SERVER_EXE)) {
+              $SERVER_EXE = "build\${{ env.PROJECT }}-server.exe"
+              $CLI_EXE = "build\${{ env.PROJECT }}-cli.exe"
+          }
+          
+          if (-Not (Test-Path $SERVER_EXE)) {
+              $SERVER_EXE = "build\Release\redis-server.exe"
+              $CLI_EXE = "build\Release\redis-cli.exe"
+          }
+          if (-Not (Test-Path $SERVER_EXE)) {
+              $SERVER_EXE = "build\redis-server.exe"
+              $CLI_EXE = "build\redis-cli.exe"
+          }
+          
+          if (-Not (Test-Path $SERVER_EXE)) {
+              Write-Error "Server executable not found, tests cannot run."
+              exit 1
+          }
+          
+          Start-Process -FilePath $SERVER_EXE -NoNewWindow -PassThru | Out-Null
+          Start-Sleep -Seconds 2
+          
+          & $CLI_EXE PING > e2e_test.log
+          & $CLI_EXE SET testkey "Hello Windows" >> e2e_test.log
+          & $CLI_EXE GET testkey >> e2e_test.log
+          & $CLI_EXE KEYS * >> e2e_test.log
+          & $CLI_EXE FLUSHDB >> e2e_test.log
+          
+          Stop-Process -Name "${{ env.PROJECT }}-server" -Force -ErrorAction SilentlyContinue
+          Stop-Process -Name "redis-server" -Force -ErrorAction SilentlyContinue
+          
+          $logContent = Get-Content e2e_test.log -Raw
+          if ($logContent -notmatch "PONG") {
+              Write-Error "E2E Test failed: Missing PONG response."
+              Get-Content e2e_test.log
+              exit 1
+          }
+          if ($logContent -notmatch "Hello Windows") {
+              Write-Error "E2E Test failed: Missing SET/GET response."
+              Get-Content e2e_test.log
+              exit 1
+          }
+          Write-Host "E2E Tests passed successfully."
         shell: pwsh
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Redis-Windows-Binaries
+          name: ${{ env.PROJECT }}-Windows-Binaries
           path: |
-            redis-src/build/*.msi
-            redis-src/build/*.zip
+            src/build/*.msi
+            src/build/*.zip
+            src/build/Release/*.exe
+            src/build/bin/Release/*.exe
+            src/build/*.exe
 
       - name: Create Release
-        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: ${{ env.VERSION == 'unstable' && format('unstable-{0}', github.run_id) || env.VERSION }}
+          name: ${{ env.PROJECT }} ${{ env.VERSION }} for Windows
+          prerelease: ${{ env.VERSION == 'unstable' }}
           files: |
-            redis-src/build/*.msi
-            redis-src/build/*.zip
+            src/build/*.msi
+            src/build/*.zip
+            src/build/Release/*.exe
+            src/build/bin/Release/*.exe
+            src/build/*.exe
