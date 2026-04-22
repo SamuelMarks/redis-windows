@@ -176,6 +176,7 @@ else()
     file(WRITE "${POSIX_STUBS_DIR}/sys/socket.h" "#include <posix-sockets.h>\n")
     file(WRITE "${POSIX_STUBS_DIR}/poll.h" "#include <posix-poll.h>\n")
     file(WRITE "${POSIX_STUBS_DIR}/sys/un.h" "#include <posix-sys-un.h>\n")
+    file(WRITE "${POSIX_STUBS_DIR}/sys/epoll.h" "#include <linux-epoll.h>\n")
     file(MAKE_DIRECTORY "${POSIX_STUBS_DIR}/arpa")
     file(WRITE "${POSIX_STUBS_DIR}/arpa/inet.h" "#include <posix-arpa-inet.h>\n")
     file(WRITE "${POSIX_STUBS_DIR}/netdb.h" "#include <posix-netdb.h>\n")
@@ -258,7 +259,7 @@ static inline int unsetenv(const char *name) {
     
     # Extract include directories from auto-win-msvc
     get_target_property(MEGA_INCLUDES auto-win-msvc INTERFACE_INCLUDE_DIRECTORIES)
-    get_filename_component(AUTO_WIN_MSVC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../auto-win-msvc" ABSOLUTE)
+    set(AUTO_WIN_MSVC_DIR "${auto_win_msvc_SOURCE_DIR}")
     file(GLOB POSIX_EXTRA_DIRS "${AUTO_WIN_MSVC_DIR}/posix-*/include" "${AUTO_WIN_MSVC_DIR}/bsd-*/include" "${AUTO_WIN_MSVC_DIR}/linux-*/include")
     list(FILTER POSIX_EXTRA_DIRS EXCLUDE REGEX "posix-stdatomic")
     message(WARNING "POSIX_EXTRA_DIRS = ${POSIX_EXTRA_DIRS}")
@@ -732,5 +733,5 @@ endif()
 
 
 
-add_executable(test_msvc_c11 test_msvc_c11.c)
+
 

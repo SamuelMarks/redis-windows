@@ -12,7 +12,6 @@ message(STATUS "CFLAGS: ${CMAKE_C_FLAGS}")
 get_redis_server_linker_option(REDIS_SERVER_LDFLAGS)
 list(APPEND SERVER_LIBS "fpconv")
 list(APPEND SERVER_LIBS "hdr_histogram")
-list(APPEND SERVER_LIBS "ffc")
 list(APPEND SERVER_LIBS "lualib")
 list(APPEND SERVER_LIBS "xxhash")
 redis_build_and_install_bin(redis-server "${REDIS_SERVER_SRCS}" "${REDIS_SERVER_LDFLAGS}" "${SERVER_LIBS}"
@@ -66,7 +65,6 @@ unset(BUILD_SANITIZER CACHE)
 # Target: redis-cli
 list(APPEND CLI_LIBS "fpconv")
 list(APPEND CLI_LIBS "linenoise")
-list(APPEND CLI_LIBS "ffc")
 list(APPEND CLI_LIBS "hdr_histogram")
 list(APPEND CLI_LIBS "xxhash")
 redis_build_and_install_bin(redis-cli "${REDIS_CLI_SRCS}" "${REDIS_SERVER_LDFLAGS}" "${CLI_LIBS}" "redis-cli")
@@ -129,8 +127,8 @@ add_custom_target(hint ALL
 )
 
 
-target_link_libraries(redis-server lualib hdr_histogram ffc xxhash)
-target_link_libraries(redis-cli hdr_histogram ffc xxhash)
+target_link_libraries(redis-server lualib hdr_histogram xxhash)
+target_link_libraries(redis-cli hdr_histogram xxhash)
 
 
 

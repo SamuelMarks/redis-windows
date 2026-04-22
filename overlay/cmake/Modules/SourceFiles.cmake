@@ -26,6 +26,7 @@ set(REDIS_SERVER_SRCS
     ${CMAKE_SOURCE_DIR}/src/iothread.c
     ${CMAKE_SOURCE_DIR}/src/networking.c
     ${CMAKE_SOURCE_DIR}/src/util.c
+    ${CMAKE_SOURCE_DIR}/src/fast_float_strtod.c
     ${CMAKE_SOURCE_DIR}/src/object.c
     ${CMAKE_SOURCE_DIR}/src/db.c
     ${CMAKE_SOURCE_DIR}/src/replication.c
@@ -35,6 +36,7 @@ set(REDIS_SERVER_SRCS
     ${CMAKE_SOURCE_DIR}/src/t_set.c
     ${CMAKE_SOURCE_DIR}/src/t_zset.c
     ${CMAKE_SOURCE_DIR}/src/t_hash.c
+    ${CMAKE_SOURCE_DIR}/src/vector.c
     ${CMAKE_SOURCE_DIR}/src/config.c
     ${CMAKE_SOURCE_DIR}/src/aof.c
     ${CMAKE_SOURCE_DIR}/src/pubsub.c
@@ -133,6 +135,7 @@ set(REDIS_CLI_SRCS
     ${CMAKE_SOURCE_DIR}/src/sds.c
     ${CMAKE_SOURCE_DIR}/src/sha256.c
     ${CMAKE_SOURCE_DIR}/src/util.c
+    ${CMAKE_SOURCE_DIR}/src/fast_float_strtod.c
     ${CMAKE_SOURCE_DIR}/src/redis-cli.c
     ${CMAKE_SOURCE_DIR}/src/zmalloc.c
     ${CMAKE_SOURCE_DIR}/src/release.c
@@ -156,6 +159,7 @@ set(REDIS_BENCHMARK_SRCS
     ${CMAKE_SOURCE_DIR}/src/sds.c
     ${CMAKE_SOURCE_DIR}/src/sha256.c
     ${CMAKE_SOURCE_DIR}/src/util.c
+    ${CMAKE_SOURCE_DIR}/src/fast_float_strtod.c
     ${CMAKE_SOURCE_DIR}/src/redis-benchmark.c
     ${CMAKE_SOURCE_DIR}/src/adlist.c
     ${CMAKE_SOURCE_DIR}/src/dict.c
