@@ -349,10 +349,10 @@ if (PYTHON_EXE)
     add_custom_command(
         OUTPUT ${CMAKE_BINARY_DIR}/fmtargs_generated
         DEPENDS ${CMAKE_SOURCE_DIR}/utils/generate-fmtargs.py
-        COMMAND sed '/Everything/,$$d' fmtargs.h > fmtargs.h.tmp
+        COMMAND ${PYTHON_EXE} -c "import sys; c = open('fmtargs.h', 'r').read(); p = c.find('/* Everything'); open('fmtargs.h.tmp', 'w').write(c[:p] if p != -1 else c)"
         COMMAND ${PYTHON_EXE} ${CMAKE_SOURCE_DIR}/utils/generate-fmtargs.py >> fmtargs.h.tmp
-        COMMAND mv fmtargs.h.tmp fmtargs.h
-        COMMAND touch ${CMAKE_BINARY_DIR}/fmtargs_generated
+        COMMAND ${CMAKE_COMMAND} -E copy fmtargs.h.tmp fmtargs.h
+        COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_BINARY_DIR}/fmtargs_generated
         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/src")
     add_custom_target(generate_fmtargs_h DEPENDS ${CMAKE_BINARY_DIR}/fmtargs_generated)
 else ()
