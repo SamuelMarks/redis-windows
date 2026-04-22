@@ -16,7 +16,7 @@ endif ()
 # Options
 option(BUILD_LUA "Build Redis Lua scripting engine" ON)
 option(BUILD_UNIT_GTESTS "Build redis-unit-gtests" OFF)
-option(BUILD_TEST_MODULES "Build all test modules" OFF)
+option(BUILD_TEST_MODULES "Build all test modules" ON)
 option(BUILD_EXAMPLE_MODULES "Build example modules" OFF)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
