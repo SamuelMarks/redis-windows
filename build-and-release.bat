@@ -108,61 +108,16 @@ cpack -G NSIS -C Release
 cpack -G ZIP -C Release
 cd ..
 
-echo [3/5] Running E2E Tests...
-set SERVER_EXE=build\bin\Release\%PROJECT%-server.exe
-set CLI_EXE=build\bin\Release\%PROJECT%-cli.exe
-
-if not exist "%SERVER_EXE%" (
-    set SERVER_EXE=build\bin\%PROJECT%-server.exe
-    set CLI_EXE=build\bin\%PROJECT%-cli.exe
-)
-
-if not exist "%SERVER_EXE%" (
-    :: Fallback to redis-server.exe if project is valkey but binary is still redis
-    set SERVER_EXE=build\bin\Release\redis-server.exe
-    set CLI_EXE=build\bin\Release\redis-cli.exe
-    if not exist "!SERVER_EXE!" (
-        set SERVER_EXE=build\bin\redis-server.exe
-        set CLI_EXE=build\bin\redis-cli.exe
-    )
-)
-
-if not exist "%SERVER_EXE%" (
-    echo Server executable not found, tests cannot run.
-    exit /b 1
-)
-
-start "%PROJECT% Server" "%SERVER_EXE%"
-:: Wait for the server to start
-timeout /t 2 /nobreak >nul
-
-echo Running CLI commands...
-"%CLI_EXE%" PING > e2e_test.log
-"%CLI_EXE%" SET testkey "Hello Windows" >> e2e_test.log
-"%CLI_EXE%" GET testkey >> e2e_test.log
-"%CLI_EXE%" KEYS * >> e2e_test.log
-"%CLI_EXE%" FLUSHDB >> e2e_test.log
-
-:: Kill the server
-taskkill /f /im %PROJECT%-server.exe >nul 2>&1
-taskkill /f /im redis-server.exe >nul 2>&1
-
-:: Verify test output
-findstr /C:"PONG" e2e_test.log >nul
+echo [3/5] Running Tests (CTest)...
+cd build
+ctest -C Release --output-on-failure
 if errorlevel 1 (
-    echo E2E Test failed: Missing PONG response.
-    type e2e_test.log
+    echo CTest failed.
     exit /b 1
 )
+cd ..
 
-findstr /C:"Hello Windows" e2e_test.log >nul
-if errorlevel 1 (
-    echo E2E Test failed: Missing SET/GET response.
-    type e2e_test.log
-    exit /b 1
-)
-
-echo E2E Tests passed successfully.
+echo Tests passed successfully.
 
 if "!LOCAL_ONLY!"=="1" (
     echo.
@@ -190,7 +145,7 @@ if errorlevel 1 (
 
 echo [5/5] Creating GitHub release...
 :: Gather all files to upload
-set ASSETS="%SRC_DIR%\build\*.msi" "%SRC_DIR%\build\*.zip" "%SRC_DIR%\build\Release\*.exe" "%SRC_DIR%\build\bin\Release\*.exe"
+set ASSETS="%SRC_DIR%\build\*.msi" "%SRC_DIR%\build\*.zip" "%SRC_DIR%\build\*.exe" "%SRC_DIR%\build\bin\Release\*.exe"
 :: If single config generator was used, Release won't exist.
 if exist "%SRC_DIR%\build\redis-server.exe" set ASSETS="%SRC_DIR%\build\*.msi" "%SRC_DIR%\build\*.zip" "%SRC_DIR%\build\*.exe" "%SRC_DIR%\build\bin\*.exe"
 

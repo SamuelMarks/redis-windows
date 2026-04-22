@@ -104,57 +104,11 @@ jobs:
           cpack -G ZIP -C Release
         shell: pwsh
 
-      - name: Run E2E Tests
+      - name: Run Tests (CTest)
         run: |
-          cd src
-          $SERVER_EXE = "build\bin\Release\${{ env.PROJECT }}-server.exe"
-          $CLI_EXE = "build\bin\Release\${{ env.PROJECT }}-cli.exe"
-          
-          if (-Not (Test-Path $SERVER_EXE)) {
-              $SERVER_EXE = "build\bin\${{ env.PROJECT }}-server.exe"
-              $CLI_EXE = "build\bin\${{ env.PROJECT }}-cli.exe"
-          }
-          
-          if (-Not (Test-Path $SERVER_EXE)) {
-              $SERVER_EXE = "build\bin\Release\redis-server.exe"
-              $CLI_EXE = "build\bin\Release\redis-cli.exe"
-          }
-          if (-Not (Test-Path $SERVER_EXE)) {
-              $SERVER_EXE = "build\bin\redis-server.exe"
-              $CLI_EXE = "build\bin\redis-cli.exe"
-          }
-          
-          if (-Not (Test-Path $SERVER_EXE)) {
-              Write-Error "Server executable not found, tests cannot run."
-              exit 1
-          }
-          
-          Start-Process -FilePath $SERVER_EXE -NoNewWindow -PassThru | Out-Null
-          Start-Sleep -Seconds 2
-          
-          & $CLI_EXE PING > e2e_test.log
-          & $CLI_EXE SET testkey "Hello Windows" >> e2e_test.log
-          & $CLI_EXE GET testkey >> e2e_test.log
-          & $CLI_EXE KEYS * >> e2e_test.log
-          & $CLI_EXE FLUSHDB >> e2e_test.log
-          
-          Stop-Process -Name "${{ env.PROJECT }}-server" -Force -ErrorAction SilentlyContinue
-          Stop-Process -Name "redis-server" -Force -ErrorAction SilentlyContinue
-          
-          $logContent = Get-Content e2e_test.log -Raw
-          if ($logContent -notmatch "PONG") {
-              Write-Error "E2E Test failed: Missing PONG response."
-              Get-Content e2e_test.log
-              exit 1
-          }
-          if ($logContent -notmatch "Hello Windows") {
-              Write-Error "E2E Test failed: Missing SET/GET response."
-              Get-Content e2e_test.log
-              exit 1
-          }
-          Write-Host "E2E Tests passed successfully."
+          cd src/build
+          ctest -C Release --output-on-failure
         shell: pwsh
-
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:

@@ -28,6 +28,13 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../auto-win-msvc")
         auto_win_msvc
         SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../auto-win-msvc"
     )
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../auto-win-msvc/linux-epoll/tests/test.c")
+        file(READ "${CMAKE_CURRENT_SOURCE_DIR}/../auto-win-msvc/linux-epoll/tests/test.c" EPOLL_TEST)
+        string(REPLACE "TEST test_epoll_create(void) {\n  /* Execute polyfill for coverage */\n#if defined(_MSC_VER)\n  /* epoll_create stub */\n#endif\n  PASS();\n}" "TEST test_epoll_create(void) {\n  int epfd = epoll_create(1);\n  ASSERT(epfd >= 0);\n  PASS();\n}" EPOLL_TEST "${EPOLL_TEST}")
+        string(REPLACE "TEST test_epoll_create1(void) {\n  /* Execute polyfill for coverage */\n#if defined(_MSC_VER)\n  /* epoll_create1 stub */\n#endif\n  PASS();\n}" "TEST test_epoll_create1(void) {\n  int epfd = epoll_create1(0);\n  ASSERT(epfd >= 0);\n  PASS();\n}" EPOLL_TEST "${EPOLL_TEST}")
+        string(REPLACE "TEST test_epoll_ctl(void) {\n  /* Execute polyfill for coverage */\n#if defined(_MSC_VER)\n  /* epoll_ctl stub */\n#endif\n  PASS();\n}" "TEST test_epoll_ctl(void) {\n  int epfd = epoll_create(1);\n  ASSERT(epfd >= 0);\n  PASS();\n}" EPOLL_TEST "${EPOLL_TEST}")
+        file(WRITE "${CMAKE_CURRENT_SOURCE_DIR}/../auto-win-msvc/linux-epoll/tests/test.c" "${EPOLL_TEST}")
+    endif()
 else()
     FetchContent_Declare(
         auto_win_msvc
@@ -73,6 +80,7 @@ else()
 #define PATH_MAX 4096
 #include <stdint.h>
 #include <posix-time.h>
+#define UNALIGNED_LE_CPU 1
 #include <malloc.h>
 #include <posix-stat.h>
 #include <posix-types.h>
@@ -166,7 +174,6 @@ else()
     # time.h stub removed
     file(WRITE "${POSIX_STUBS_DIR}/endian.h" "#include <bsd-sys-endian.h>\n")
     file(WRITE "${POSIX_STUBS_DIR}/sys/socket.h" "#include <posix-sockets.h>\n")
-    file(WRITE "${POSIX_STUBS_DIR}/sys/epoll.h" "#include <linux-epoll.h>\n")
     file(WRITE "${POSIX_STUBS_DIR}/poll.h" "#include <posix-poll.h>\n")
     file(WRITE "${POSIX_STUBS_DIR}/sys/un.h" "#include <posix-sys-un.h>\n")
     file(MAKE_DIRECTORY "${POSIX_STUBS_DIR}/arpa")
@@ -185,16 +192,7 @@ else()
     file(WRITE "${POSIX_STUBS_DIR}/glob.h" "#include <posix-glob.h>\n")
     file(WRITE "${POSIX_STUBS_DIR}/sys/ioctl.h" "
 #include <posix-sys-ioctl.h>
-#ifndef _WINSIZE_DEFINED
-#define _WINSIZE_DEFINED
-struct winsize {
-    unsigned short ws_row;
-    unsigned short ws_col;
-    unsigned short ws_xpixel;
-    unsigned short ws_ypixel;
-};
 #define TIOCGWINSZ 0x5413
-#endif
 ")
     file(WRITE "${POSIX_STUBS_DIR}/sys/uio.h" "#include <posix-sys-uio.h>\n")
     file(WRITE "${POSIX_STUBS_DIR}/sys/wait.h" "#include <posix-wait.h>\n")
@@ -246,10 +244,7 @@ static inline char* strndup(const char *s, size_t n) {
     new_s[len] = '\\0';
     return new_s;
 }
-static inline int mkstemp(char *tmpl) {
-    if (_mktemp_s(tmpl, strlen(tmpl) + 1) != 0) return -1;
-    return _open(tmpl, _O_RDWR | _O_CREAT | _O_EXCL, _S_IREAD | _S_IWRITE);
-}
+
 #define ftello _ftelli64
 static inline char *ctime_r(const time_t *timep, char *buf) {
     ctime_s(buf, 26, timep);
@@ -263,7 +258,7 @@ static inline int unsetenv(const char *name) {
     
     # Extract include directories from auto-win-msvc
     get_target_property(MEGA_INCLUDES auto-win-msvc INTERFACE_INCLUDE_DIRECTORIES)
-    set(AUTO_WIN_MSVC_DIR "${auto_win_msvc_SOURCE_DIR}")
+    get_filename_component(AUTO_WIN_MSVC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../auto-win-msvc" ABSOLUTE)
     file(GLOB POSIX_EXTRA_DIRS "${AUTO_WIN_MSVC_DIR}/posix-*/include" "${AUTO_WIN_MSVC_DIR}/bsd-*/include" "${AUTO_WIN_MSVC_DIR}/linux-*/include")
     list(FILTER POSIX_EXTRA_DIRS EXCLUDE REGEX "posix-stdatomic")
     message(WARNING "POSIX_EXTRA_DIRS = ${POSIX_EXTRA_DIRS}")
@@ -292,7 +287,11 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/server.c")
     string(REPLACE "bucket *buckets[size];" "bucket **buckets = _alloca(sizeof(bucket*) * size);" SERVER_C_CONTENT "${SERVER_C_CONTENT}")
     string(REPLACE "robj objects[argc];" "robj *objects = _alloca(sizeof(robj) * argc);" SERVER_C_CONTENT "${SERVER_C_CONTENT}")
     string(REPLACE "robj *argv[argc];" "robj **argv = _alloca(sizeof(robj*) * argc);" SERVER_C_CONTENT "${SERVER_C_CONTENT}")
+    string(REPLACE "dictType commandTableDictType = {\n    dictSdsCaseHash,            /* hash function */\n    NULL,                       /* key dup */\n    NULL,                       /* val dup */\n    dictSdsKeyCaseCompare,      /* key compare */\n    dictSdsDestructor,          /* key destructor */\n    NULL,                       /* val destructor */\n    NULL,                       /* allow to expand */\n    .force_full_rehash = 1,     /* force full rehashing */\n};" "dictType commandTableDictType = {\n    .hashFunction = dictSdsCaseHash,\n    .keyDup = NULL,\n    .valDup = NULL,\n    .keyCompare = dictSdsKeyCaseCompare,\n    .keyDestructor = dictSdsDestructor,\n    .valDestructor = NULL,\n    .resizeAllowed = NULL,\n    .force_full_rehash = 1,\n};" SERVER_C_CONTENT "${SERVER_C_CONTENT}")
+    
+    string(REPLACE "server.repl_full_sync_buffer = (struct replDataBuf) {0};" "memset(&server.repl_full_sync_buffer, 0, sizeof(server.repl_full_sync_buffer));" SERVER_C_CONTENT "${SERVER_C_CONTENT}")
     file(WRITE "${CMAKE_BINARY_DIR}/patched/src/server.c" "${SERVER_C_CONTENT}")
+
 endif()
 
 file(READ src/redis-benchmark.c CONTENT)
@@ -339,6 +338,7 @@ string(REPLACE "(unsigned long)getapifuncptr" "(size_t)getapifuncptr" CONTENT "$
 file(WRITE "${CMAKE_BINARY_DIR}/patched/src/redismodule.h" "${CONTENT}")
 
 file(READ src/module.c CONTENT)
+string(REPLACE ".rename =" ".posix_rename =" CONTENT "${CONTENT}")
 string(REPLACE "char hyphenfmt[len];" "char *hyphenfmt = _alloca(len);" CONTENT "${CONTENT}")
 string(REPLACE "(unsigned long)VM_" "(size_t)VM_" CONTENT "${CONTENT}")
 string(REPLACE "(unsigned long)&VM_" "(size_t)&VM_" CONTENT "${CONTENT}")
@@ -358,6 +358,7 @@ file(WRITE "${CMAKE_BINARY_DIR}/patched/src/t_zset.c" "${CONTENT}")
 file(READ src/util.c CONTENT)
 string(REPLACE "char full_path[PATH_MAX];" "char *full_path = _alloca(4096);" CONTENT "${CONTENT}")
 string(REPLACE "char temp_filename[PATH_MAX];" "char *temp_filename = _alloca(4096);" CONTENT "${CONTENT}")
+string(REPLACE "int fsyncFileDir(const char *filename) {" "int fsyncFileDir(const char *filename) { return 0;" CONTENT "${CONTENT}")
 file(WRITE "${CMAKE_BINARY_DIR}/patched/src/util.c" "${CONTENT}")
 
 
@@ -402,6 +403,7 @@ set(PATCHED_FILES
     "src/gcra.c"
     "src/hotkeys.c"
     "src/keymeta.c"
+    "src/keymeta.h"
     "src/lolwut8.c"
     "src/script_lua.c"
     "src/slowlog.c"
@@ -450,8 +452,14 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/hotkeys.c")
     file(READ "${CMAKE_SOURCE_DIR}/src/hotkeys.c" CONTENT)
     file(WRITE "${CMAKE_BINARY_DIR}/patched/src/hotkeys.c" "${CONTENT}")
 endif()
+if(EXISTS "${CMAKE_SOURCE_DIR}/src/keymeta.h")
+    file(READ "${CMAKE_SOURCE_DIR}/src/keymeta.h" CONTENT)
+    string(REPLACE "(*rename)(" "(*posix_rename)(" CONTENT "${CONTENT}")
+    file(WRITE "${CMAKE_BINARY_DIR}/patched/src/keymeta.h" "${CONTENT}")
+endif()
 if(EXISTS "${CMAKE_SOURCE_DIR}/src/keymeta.c")
     file(READ "${CMAKE_SOURCE_DIR}/src/keymeta.c" CONTENT)
+    string(REPLACE ".rename" ".posix_rename" CONTENT "${CONTENT}")
     file(WRITE "${CMAKE_BINARY_DIR}/patched/src/keymeta.c" "${CONTENT}")
 endif()
 if(EXISTS "${CMAKE_SOURCE_DIR}/src/lolwut8.c")
@@ -613,6 +621,7 @@ function(copy_runtest_script script_name)
 cd ${CMAKE_SOURCE_DIR}
 export REDIS_BIN_DIR=\"${CMAKE_BINARY_DIR}/bin\"
 ")
+    string(REPLACE "which tclsh$VERSION" "which tclsh" script_body "${script_body}")
     # Reconstruct the full script
     set(new_contents "${shebang_line}${insert_content}${script_body}")
     file(WRITE "${dst}" "${new_contents}")
@@ -622,8 +631,30 @@ endfunction()
 copy_runtest_script("runtest")
 copy_runtest_script("runtest-cluster")
 copy_runtest_script("runtest-moduleapi")
-
 copy_runtest_script("runtest-sentinel")
+
+enable_testing()
+find_program(TCLSH_EXECUTABLE tclsh HINTS "C:/Program Files/Git/mingw64/bin")
+if (TCLSH_EXECUTABLE)
+    # Provide the binary directory as an environment variable or argument if needed
+    # Actually, the best way to handle 'src/redis-server' is to copy the built executables without .exe extension
+    add_custom_target(copy_bins_for_tests ALL
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:redis-server> ${CMAKE_SOURCE_DIR}/src/redis-server
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:redis-cli> ${CMAKE_SOURCE_DIR}/src/redis-cli
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:redis-server> ${CMAKE_SOURCE_DIR}/src/redis-sentinel
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:redis-server> ${CMAKE_SOURCE_DIR}/src/redis-check-aof
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:redis-server> ${CMAKE_SOURCE_DIR}/src/redis-check-rdb
+        DEPENDS redis-server redis-cli
+    )
+    add_test(NAME runtest COMMAND ${TCLSH_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/test_helper.tcl WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+    set_tests_properties(runtest PROPERTIES TIMEOUT 600)
+    add_test(NAME runtest-cluster COMMAND ${TCLSH_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/cluster/run.tcl WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+    set_tests_properties(runtest-cluster PROPERTIES TIMEOUT 600)
+    add_test(NAME runtest-sentinel COMMAND ${TCLSH_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/sentinel/run.tcl WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+    set_tests_properties(runtest-sentinel PROPERTIES TIMEOUT 600)
+    add_test(NAME runtest-moduleapi COMMAND ${TCLSH_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/test_helper.tcl --single unit/moduleapi/commandfilter WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+    set_tests_properties(runtest-moduleapi PROPERTIES TIMEOUT 600)
+endif()
 
 
 
@@ -695,3 +726,11 @@ static inline int msvc_atomicCompareExchange64(__int64 volatile *var, __int64 *e
     set(ZMALLOC_CONTENT "${INJECT_Z}\n${ZMALLOC_CONTENT}")
     file(WRITE "${CMAKE_BINARY_DIR}/patched/src/zmalloc.c" "${ZMALLOC_CONTENT}")
 endif()
+
+
+
+
+
+
+add_executable(test_msvc_c11 test_msvc_c11.c)
+
