@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+      - '*unstable*'
   schedule:
     - cron: '0 0 * * 0'
   workflow_dispatch:
@@ -60,11 +61,23 @@ jobs:
         with:
           path: build-repo
 
+      - name: Determine Upstream Ref
+        id: determine_ref
+        run: |
+          $ref = $env:VERSION
+          if ($ref -match '^v(?<version>\d.*)') {
+              $ref = $Matches.version
+          } elseif ($ref -match 'unstable') {
+              $ref = 'unstable'
+          }
+          echo "UPSTREAM_REF=$ref" >> $env:GITHUB_ENV
+        shell: pwsh
+
       - name: Checkout upstream source
         uses: actions/checkout@v4
         with:
           repository: ${{ env.PROJECT == 'valkey' && 'valkey-io/valkey' || 'redis/redis' }}
-          ref: ${{ env.VERSION }}
+          ref: ${{ env.UPSTREAM_REF }}
           path: src
 
       - name: Apply Overlay
@@ -125,7 +138,7 @@ jobs:
         with:
           tag_name: ${{ env.VERSION == 'unstable' && format('unstable-{0}', github.run_id) || env.VERSION }}
           name: ${{ env.PROJECT }} ${{ env.VERSION }} for Windows
-          prerelease: ${{ env.VERSION == 'unstable' }}
+          prerelease: ${{ contains(env.VERSION, 'unstable') }}
           files: |
             src/build/*.msi
             src/build/*.zip
