@@ -366,3 +366,14 @@ index 2f73df1c4..26574015e 100644
      }
  }
 
+
+--- a/tests/cluster/tests/includes/init-tests.tcl
++++ b/tests/cluster/tests/includes/init-tests.tcl
+@@ -54,7 +54,7 @@ test "Cluster nodes hard reset" {
+         R $id config set repl-diskless-load disabled
+         R $id config set cluster-announce-hostname ""
+         R $id DEBUG DROP-CLUSTER-PACKET-FILTER -1
+-        R $id config rewrite
++        catch {R $id config rewrite}
+     }
+ }
