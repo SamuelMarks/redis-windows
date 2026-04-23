@@ -309,15 +309,6 @@ index 2f73df1c4..26574015e 100644
  # Redis test suite.
  #
  # Copyright (C) 2014-Present, Redis Ltd.
-@@ -177,7 +179,7 @@ proc reconnect {args} {
-     set host [dict get $srv "host"]
-     set port [dict get $srv "port"]
-     set config [dict get $srv "config"]
--    set client [redis $host $port 0 $::tls]
-+    set f [open "C:/Users/samue/repos/redis/reconnect_trace.txt" a]; puts $f "Calling redis $host $port"; close $f; set client [redis $host $port 0 $::tls]; set f [open "C:/Users/samue/repos/redis/reconnect_trace.txt" a]; puts $f "Done calling redis"; close $f
-     if {[dict exists $srv "client"]} {
-         set old [dict get $srv "client"]
-         $old close
 @@ -396,10 +398,11 @@ proc read_from_test_client fd {
              gets stdin
          }
@@ -377,3 +368,28 @@ index 2f73df1c4..26574015e 100644
 +        catch {R $id config rewrite}
      }
  }
+d i f f   - - g i t   a / s r c / s i p h a s h . c   b / s r c / s i p h a s h . c  
+ i n d e x   3 c 7 0 6 9 6 6 7 . . 4 2 3 7 f 0 b 7 b   1 0 0 6 4 4  
+ - - -   a / s r c / s i p h a s h . c  
+ + + +   b / s r c / s i p h a s h . c  
+ @ @   - 1 8 4 , 6   + 1 8 4 , 9   @ @   u i n t 6 4 _ t   s i p h a s h ( c o n s t   u i n t 8 _ t   * i n ,   c o n s t   s i z e _ t   i n l e n ,   c o n s t   u i n t 8 _ t   * k )   {  
+   }  
+    
+   N O _ S A N I T I Z E ( " a l i g n m e n t " )  
+ + # i f d e f   _ M S C _ V E R  
+ + # p r a g m a   o p t i m i z e ( " " ,   o f f )  
+ + # e n d i f  
+   u i n t 6 4 _ t   s i p h a s h _ n o c a s e ( c o n s t   u i n t 8 _ t   * i n ,   c o n s t   s i z e _ t   i n l e n ,   c o n s t   u i n t 8 _ t   * k )  
+   {  
+   # i f n d e f   U N A L I G N E D _ L E _ C P U  
+ @ @   - 3 5 9 , 6   + 3 6 2 , 9   @ @   i n t   s i p h a s h _ t e s t ( v o i d )   {  
+           i f   ( ! f a i l s )   r e t u r n   0 ;  
+           r e t u r n   1 ;  
+   }  
+ + # i f d e f   _ M S C _ V E R  
+ + # p r a g m a   o p t i m i z e ( " " ,   o n )  
+ + # e n d i f  
+    
+   i n t   m a i n ( v o i d )   {  
+           i f   ( s i p h a s h _ t e s t ( )   = =   0 )   {  
+ 
