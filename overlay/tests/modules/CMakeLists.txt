@@ -47,7 +47,7 @@ foreach (MODULE_NAME ${MODULES_LIST})
         # set the std to gnu11 here, to allow crash.c to get compiled
         target_compile_options(${MODULE_NAME} PRIVATE "-std=gnu11")
     endif ()
-    set_target_properties(${MODULE_NAME} PROPERTIES PREFIX "")
+    set_target_properties(${MODULE_NAME} PROPERTIES PREFIX "" WINDOWS_EXPORT_ALL_SYMBOLS ON LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/tests/modules" RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/tests/modules" LIBRARY_OUTPUT_DIRECTORY_RELEASE "${CMAKE_SOURCE_DIR}/tests/modules" RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_SOURCE_DIR}/tests/modules" LIBRARY_OUTPUT_DIRECTORY_DEBUG "${CMAKE_SOURCE_DIR}/tests/modules" RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_SOURCE_DIR}/tests/modules")
     redis_install_bin(${MODULE_NAME})
     if (APPLE)
         # Some symbols can only be resolved during runtime (they exist in the executable)

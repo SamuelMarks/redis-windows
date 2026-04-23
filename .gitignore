@@ -2,3 +2,7 @@
 .vscode
 *build*
 auto-win-msvc
+src/
+temp_redis/
+CDD_C_PLAN_00001.md
+*.ps1
