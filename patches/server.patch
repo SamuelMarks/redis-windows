@@ -314,7 +314,7 @@ index 2f73df1c4..26574015e 100644
      set port [dict get $srv "port"]
      set config [dict get $srv "config"]
 -    set client [redis $host $port 0 $::tls]
-+    set f [open "C:/Users/samue/repos/redis/reconnect_trace.txt" a]; puts $f "Calling redis $host $port"; close $f; set client [redis $host $port 0 $::tls]; set f [open "C:/Users/samue/repos/redis/reconnect_trace.txt" a]; puts $f "Done calling redis"; close $f
++    set client [redis $host $port 0 $::tls]
      if {[dict exists $srv "client"]} {
          set old [dict get $srv "client"]
          $old close

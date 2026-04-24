@@ -236,10 +236,10 @@ else()
 #include <fcntl.h>
 static inline int __builtin_clz(unsigned int x) { unsigned long r; if (_BitScanReverse(&r, x)) return 31 - r; return 32; }
 static inline int __builtin_clzll(unsigned long long x) { unsigned long r; if (_BitScanReverse64(&r, x)) return 63 - r; return 64; }
-#define __builtin_clzl __builtin_clzll
+#define __builtin_clzl __builtin_clz
 static inline int __builtin_ctz(unsigned int x) { unsigned long r; if (_BitScanForward(&r, x)) return r; return 32; }
 static inline int __builtin_ctzll(unsigned long long x) { unsigned long r; if (_BitScanForward64(&r, x)) return r; return 64; }
-#define __builtin_ctzl __builtin_ctzll
+#define __builtin_ctzl __builtin_ctz
 static inline int __builtin_popcount(unsigned int x) { return __popcnt(x); }
 static inline uint64_t __builtin_bswap64(uint64_t x) { return _byteswap_uint64(x); }
 #define random rand
