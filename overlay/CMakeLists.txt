@@ -48,9 +48,13 @@ FetchContent_MakeAvailable(auto_win_msvc)
 set(DLFCN_SRC "${auto_win_msvc_SOURCE_DIR}/posix-dlfcn/src/posix-dlfcn.c")
 if(EXISTS "${DLFCN_SRC}")
     file(READ "${DLFCN_SRC}" DLFCN_CONTENT)
-    string(REPLACE "handle = LoadLibraryA(fixed_file);" "char *p = fixed_file; while (*p) { if (*p == '/') *p = '\\\\'; p++; } handle = LoadLibraryA(fixed_file);" DLFCN_CONTENT "${DLFCN_CONTENT}")
-    file(WRITE "${DLFCN_SRC}" "${DLFCN_CONTENT}")
+    if(NOT DLFCN_CONTENT MATCHES "char \\*p = fixed_file")
+        string(REPLACE "handle = LoadLibraryA(fixed_file);" "char *p = fixed_file; while (*p) { if (*p == '/') *p = '\\\\'; p++; } handle = LoadLibraryA(fixed_file);" DLFCN_CONTENT "${DLFCN_CONTENT}")
+        file(WRITE "${DLFCN_SRC}" "${DLFCN_CONTENT}")
+    endif()
 endif()
+
+
 set(INSTALL_GTEST OFF CACHE BOOL "Disable GTest installation" FORCE)
 if(MSVC)
     link_libraries(auto-win-msvc)
@@ -531,8 +535,10 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/bitops.c")
 #include <intrin.h>
 #define __builtin_popcountll(x) (int)__popcnt64(x)
 ")
-    set(BITOPS_CONTENT "${INJECT_BITOPS}
-${BITOPS_CONTENT}")
+    set(BITOPS_CONTENT "${INJECT_BITOPS}\n${BITOPS_CONTENT}")
+    string(REGEX REPLACE "#define BITOP_USE_AVX2[^\n]*" "#define BITOP_USE_AVX2 0" BITOPS_CONTENT "${BITOPS_CONTENT}")
+    string(REGEX REPLACE "#define BITOP_USE_AVX512[^\n]*" "#define BITOP_USE_AVX512 0" BITOPS_CONTENT "${BITOPS_CONTENT}")
+    string(REGEX REPLACE "#define BITOPS_USE_AVX512_POPCOUNT[^\n]*" "#define BITOPS_USE_AVX512_POPCOUNT 0" BITOPS_CONTENT "${BITOPS_CONTENT}")
     file(WRITE "${CMAKE_BINARY_DIR}/patched/src/bitops.c" "${BITOPS_CONTENT}")
 endif()
 
