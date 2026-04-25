@@ -665,7 +665,7 @@ if (TCLSH_EXECUTABLE)
     set_tests_properties(runtest-cluster PROPERTIES TIMEOUT 600)
     add_test(NAME runtest-sentinel COMMAND ${TCLSH_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/sentinel/run.tcl WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
     set_tests_properties(runtest-sentinel PROPERTIES TIMEOUT 600)
-    add_test(NAME runtest-moduleapi COMMAND ${TCLSH_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/test_helper.tcl --single unit/moduleapi/commandfilter WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+    add_test(NAME runtest-moduleapi COMMAND ${TCLSH_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/test_helper.tcl --single unit/moduleapi/commandfilter --baseport 20500 WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
     set_tests_properties(runtest-moduleapi PROPERTIES TIMEOUT 600)
 endif()
 
