@@ -253,6 +253,8 @@ static inline char* strndup(const char *s, size_t n) {
     new_s[len] = '\\0';
     return new_s;
 }
+int posix_rename(const char *oldpath, const char *newpath);
+#define rename posix_rename
 
 #define ftello _ftelli64
 static inline char *ctime_r(const time_t *timep, char *buf) {
