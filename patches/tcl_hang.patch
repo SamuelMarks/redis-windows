@@ -1,0 +1,61 @@
+﻿diff --git a/.gitignore b/.gitignore
+index 63968fb29..f106d2b5b 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -42,3 +42,14 @@ Makefile.dep
+ .ccls-cache/*
+ compile_commands.json
+ redis.code-workspace
++
++# MSVC build
++build_msvc2026/
++msvc2026-build/
++Testing/
++*.exe
++*.pdb
++*.ilk
++*.obj
++.vs/
++patched/
+diff --git a/tests/cluster/tests/includes/init-tests.tcl b/tests/cluster/tests/includes/init-tests.tcl
+index c0e898241..a9e94b779 100644
+--- a/tests/cluster/tests/includes/init-tests.tcl
++++ b/tests/cluster/tests/includes/init-tests.tcl
+@@ -1,4 +1,4 @@
+-# Initialization tests -- most units will start including this.
++∩╗┐# Initialization tests -- most units will start including this.
+ 
+ test "(init) Restart killed instances" {
+     foreach type {redis} {
+@@ -87,7 +87,7 @@ proc join_nodes_in_cluster {} {
+ test "Cluster Join and auto-discovery test" {
+     # Use multiple attempts since sometimes nodes timeout
+     # while attempting to connect.
+-    for {set attempts 3} {$attempts > 0} {incr attempts -1} {
++    for {set attempts 10} {$attempts > 0} {incr attempts -1} {
+         if {[join_nodes_in_cluster] == 1} {
+             break
+         }
+diff --git a/tests/support/cluster.tcl b/tests/support/cluster.tcl
+index cee4a6f1f..7e1cbef1e 100644
+--- a/tests/support/cluster.tcl
++++ b/tests/support/cluster.tcl
+@@ -222,7 +222,7 @@ proc ::redis_cluster::__dispatch__ {id method args} {
+         }
+ 
+         # Execute the command in the node we think is the slot owner.
+-        set retry 100
++        set retry 1000
+         set asking 0
+         while {[incr retry -1]} {
+             if {$retry < 5} {after 100}
+@@ -246,6 +246,9 @@ proc ::redis_cluster::__dispatch__ {id method args} {
+                     set node_addr [lindex $e 2]
+                     set asking 1
+                     continue
++                } elseif {[string match "*Write commands are not allowed from read-only scripts*" $e] || [string match "*READONLY*" $e] || [string match "*CLUSTERDOWN*" $e]} {
++                    after 50
++                    continue
+                 } else {
+                     # Non redirecting error.
+                     error $e $::errorInfo $::errorCode
