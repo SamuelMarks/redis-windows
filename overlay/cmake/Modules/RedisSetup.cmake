@@ -300,17 +300,17 @@ if (BUILD_SANITIZER)
     endif ()
 endif ()
 
-include_directories("${CMAKE_SOURCE_DIR}/deps/hiredis")
-include_directories("${CMAKE_SOURCE_DIR}/deps/lua/src")
-include_directories("${CMAKE_SOURCE_DIR}/deps/linenoise")
-include_directories("${CMAKE_SOURCE_DIR}/deps/hdr_histogram")
-include_directories("${CMAKE_SOURCE_DIR}/deps/fpconv")
+include_directories("${REDIS_ROOT}/deps/hiredis")
+include_directories("${REDIS_ROOT}/deps/lua/src")
+include_directories("${REDIS_ROOT}/deps/linenoise")
+include_directories("${REDIS_ROOT}/deps/hdr_histogram")
+include_directories("${REDIS_ROOT}/deps/fpconv")
 
 add_subdirectory("${CMAKE_SOURCE_DIR}/deps")
 
 # Update linker flags for the allocator
 if (USE_JEMALLOC)
-    include_directories("${CMAKE_SOURCE_DIR}/deps/jemalloc/include")
+    include_directories("${REDIS_ROOT}/deps/jemalloc/include")
 endif ()
 
 # Common compiler flags
@@ -335,25 +335,25 @@ if (PYTHON_EXE)
     message(STATUS "Found python3: ${PYTHON_EXE}")
     # Rule for generating commands.def file from json files
     message(STATUS "Adding target generate_commands_def")
-    file(GLOB COMMAND_FILES_JSON "${CMAKE_SOURCE_DIR}/src/commands/*.json")
+    file(GLOB COMMAND_FILES_JSON "${REDIS_ROOT}/src/commands/*.json")
     add_custom_command(
         OUTPUT ${CMAKE_BINARY_DIR}/commands_def_generated
         DEPENDS ${COMMAND_FILES_JSON}
-        COMMAND ${PYTHON_EXE} ${CMAKE_SOURCE_DIR}/utils/generate-command-code.py
+        COMMAND ${PYTHON_EXE} ${REDIS_ROOT}/utils/generate-command-code.py
         COMMAND touch ${CMAKE_BINARY_DIR}/commands_def_generated
-        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/src")
+        WORKING_DIRECTORY "${REDIS_ROOT}/src")
     add_custom_target(generate_commands_def DEPENDS ${CMAKE_BINARY_DIR}/commands_def_generated)
 
     # Rule for generating fmtargs.h
     message(STATUS "Adding target generate_fmtargs_h")
     add_custom_command(
         OUTPUT ${CMAKE_BINARY_DIR}/fmtargs_generated
-        DEPENDS ${CMAKE_SOURCE_DIR}/utils/generate-fmtargs.py
-        COMMAND ${PYTHON_EXE} -c "import sys; c = open('fmtargs.h', 'r').read(); p = c.find('/* Everything'); open('fmtargs.h.tmp', 'w').write(c[:p] if p != -1 else c)"
-        COMMAND ${PYTHON_EXE} ${CMAKE_SOURCE_DIR}/utils/generate-fmtargs.py >> fmtargs.h.tmp
-        COMMAND ${CMAKE_COMMAND} -E copy fmtargs.h.tmp fmtargs.h
-        COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_BINARY_DIR}/fmtargs_generated
-        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/src")
+        DEPENDS ${REDIS_ROOT}/utils/generate-fmtargs.py
+        COMMAND sed '/Everything/,$$d' fmtargs.h > fmtargs.h.tmp
+        COMMAND ${PYTHON_EXE} ${REDIS_ROOT}/utils/generate-fmtargs.py >> fmtargs.h.tmp
+        COMMAND mv fmtargs.h.tmp fmtargs.h
+        COMMAND touch ${CMAKE_BINARY_DIR}/fmtargs_generated
+        WORKING_DIRECTORY "${REDIS_ROOT}/src")
     add_custom_target(generate_fmtargs_h DEPENDS ${CMAKE_BINARY_DIR}/fmtargs_generated)
 else ()
     # Fake targets
@@ -361,16 +361,9 @@ else ()
     add_custom_target(generate_fmtargs_h)
 endif ()
 
-if (WIN32)
-    file(WRITE ${CMAKE_BINARY_DIR}/patched/src/release.h "#define REDIS_GIT_SHA1 \"00000000\"\n#define REDIS_GIT_DIRTY \"0\"\n#define REDIS_BUILD_ID \"0\"\n#include \"version.h\"\n#define REDIS_BUILD_ID_RAW \"redis \" REDIS_VERSION REDIS_BUILD_ID REDIS_GIT_DIRTY REDIS_GIT_SHA1\n")
-    add_custom_target(release_header)
-else()
-    # Generate release.h file (always)
-    add_custom_target(
-        release_header
-        COMMAND sh -c '${CMAKE_SOURCE_DIR}/src/mkreleasehdr.sh'
-        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/src")
-endif()
+file(WRITE ${CMAKE_BINARY_DIR}/release.h "#define REDIS_GIT_SHA1 \"00000000\"\n#define REDIS_GIT_DIRTY \"0\"\n#define REDIS_BUILD_ID \"0\"\n#include \"version.h\"\n#define REDIS_BUILD_ID_RAW \"redis \" REDIS_VERSION REDIS_BUILD_ID REDIS_GIT_DIRTY REDIS_GIT_SHA1\n")
+add_custom_target(release_header)
+include_directories(${CMAKE_BINARY_DIR})
 
 # -------------------------------------------------
 # Code Generation section - end
@@ -398,4 +391,4 @@ unset(BUILD_TLS_BUILTIN CACHE)
 
 
 
-include_directories("${CMAKE_SOURCE_DIR}/deps/xxhash")
+include_directories("${REDIS_ROOT}/deps/xxhash")

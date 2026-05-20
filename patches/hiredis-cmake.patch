@@ -1,4 +1,4 @@
-diff --git a/deps/hiredis/CMakeLists.txt b/deps/hiredis/CMakeLists.txt
+﻿diff --git a/deps/hiredis/CMakeLists.txt b/deps/hiredis/CMakeLists.txt
 index b7d6ee8..bf9dffa 100644
 --- a/deps/hiredis/CMakeLists.txt
 +++ b/deps/hiredis/CMakeLists.txt
