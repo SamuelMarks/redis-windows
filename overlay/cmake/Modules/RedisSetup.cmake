@@ -349,10 +349,10 @@ if (PYTHON_EXE)
     add_custom_command(
         OUTPUT ${CMAKE_BINARY_DIR}/fmtargs_generated
         DEPENDS ${REDIS_ROOT}/utils/generate-fmtargs.py
-        COMMAND sed '/Everything/,$$d' fmtargs.h > fmtargs.h.tmp
+        COMMAND ${PYTHON_EXE} -c "import sys; lines = open('fmtargs.h').readlines(); open('fmtargs.h.tmp', 'w').writelines(lines[:[i for i, line in enumerate(lines) if 'Everything' in line][0]] if any('Everything' in line for line in lines) else lines)"
         COMMAND ${PYTHON_EXE} ${REDIS_ROOT}/utils/generate-fmtargs.py >> fmtargs.h.tmp
-        COMMAND mv fmtargs.h.tmp fmtargs.h
-        COMMAND touch ${CMAKE_BINARY_DIR}/fmtargs_generated
+        COMMAND ${PYTHON_EXE} -c "import os; os.replace('fmtargs.h.tmp', 'fmtargs.h')"
+        COMMAND ${PYTHON_EXE} -c "open('${CMAKE_BINARY_DIR}/fmtargs_generated', 'w').close()"
         WORKING_DIRECTORY "${REDIS_ROOT}/src")
     add_custom_target(generate_fmtargs_h DEPENDS ${CMAKE_BINARY_DIR}/fmtargs_generated)
 else ()
