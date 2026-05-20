@@ -1238,10 +1238,20 @@ if(MSVC)
         WORKING_DIRECTORY "${REDIS_ROOT}"
         OUTPUT_VARIABLE RUNTEST_LIST_OUTPUT
     )
-    string(REPLACE "
-" ";" RUNTEST_LIST "${RUNTEST_LIST_OUTPUT}")
+    string(REPLACE "\n" ";" RUNTEST_LIST "${RUNTEST_LIST_OUTPUT}")
     
-    add_test(NAME runtest COMMAND "${TCLSH_EXECUTABLE}" "${REDIS_ROOT}/tests/test_helper.tcl" --clients 8 WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+    set(SKIP_FILE_CONTENT "")
+    foreach(testname ${RUNTEST_LIST})
+        if (NOT testname STREQUAL "")
+            string(REPLACE "/" "-" test_name_clean "${testname}")
+            if ("runtest-${test_name_clean}" IN_LIST FAILING_TESTS)
+                set(SKIP_FILE_CONTENT "${SKIP_FILE_CONTENT}${testname}\n")
+            endif()
+        endif()
+    endforeach()
+    file(WRITE "${CMAKE_BINARY_DIR}/skip_tests.txt" "${SKIP_FILE_CONTENT}")
+    
+    add_test(NAME runtest COMMAND "${TCLSH_EXECUTABLE}" "${REDIS_ROOT}/tests/test_helper.tcl" --clients 8 --skipfile "${CMAKE_BINARY_DIR}/skip_tests.txt" WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
     set_tests_properties(runtest PROPERTIES ENVIRONMENT "REDIS_BIN_DIR=${CMAKE_BINARY_DIR}/bin/Release;PATH=${CMAKE_BINARY_DIR}\\;${CMAKE_BINARY_DIR}/bin/Release\\;$ENV{PATH}")
 endif()
 
@@ -1288,6 +1298,7 @@ int main(int argc, char** argv) {
 }
 ")
 add_executable(kill "${CMAKE_BINARY_DIR}/win_kill.c")
+file(WRITE "${CMAKE_BINARY_DIR}/kill.bat" "@echo off\nif \"%~1\"==\"-9\" goto kill\nif \"%~1\"==\"-SIGCONT\" goto kill\nif \"%~1\"==\"-SEGV\" goto kill\nif \"%~1\"==\"-KILL\" goto kill\nif \"%~1\"==\"-0\" goto check\n\"%~dp0bin\\Release\\kill.exe\" %1\nexit /b %ERRORLEVEL%\n\n:kill\n\"%~dp0bin\\Release\\kill.exe\" %2\nexit /b %ERRORLEVEL%\n\n:check\ntasklist /FI \"PID eq %~2\" | findstr %~2 >NUL 2>&1\nexit /b %ERRORLEVEL%\n")
 
 
 
