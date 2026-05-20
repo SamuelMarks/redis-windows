@@ -107,13 +107,13 @@ if (MSVC AND BUILD_SHARED_LIBS)
 endif()
 
 # For NuGet packages
-INSTALL(FILES hiredis.targets
+INSTALL(FILES ${REDIS_ROOT}/deps/hiredis/hiredis.targets
     DESTINATION build/native)
 
 INSTALL(FILES ${REDIS_ROOT}/deps/hiredis/hiredis.h ${REDIS_ROOT}/deps/hiredis/read.h ${REDIS_ROOT}/deps/hiredis/sds.h ${REDIS_ROOT}/deps/hiredis/async.h ${REDIS_ROOT}/deps/hiredis/alloc.h ${REDIS_ROOT}/deps/hiredis/sockcompat.h
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/hiredis)
 
-INSTALL(DIRECTORY adapters
+INSTALL(DIRECTORY ${REDIS_ROOT}/deps/hiredis/adapters
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/hiredis)
 
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/hiredis.pc
