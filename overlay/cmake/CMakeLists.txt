@@ -189,7 +189,8 @@ else()
     file(WRITE "${POSIX_STUBS_DIR}/libgen.h" "#include <posix-libgen.h>\n")
     file(WRITE "${POSIX_STUBS_DIR}/sys/file.h" "#include <bsd-sys-file.h>\n")
     file(WRITE "${POSIX_STUBS_DIR}/regex.h" "#include <posix-regex.h>\n")
-        file(WRITE "${POSIX_STUBS_DIR}/sys/mman.h" "#include <posix-mman.h>\n")
+    file(WRITE "${POSIX_STUBS_DIR}/sys/mman.h" "#include <posix-mman.h>\n")
+    file(WRITE "${POSIX_STUBS_DIR}/sys/epoll.h" "#include <linux-epoll.h>\n")
     file(WRITE "${POSIX_STUBS_DIR}/glob.h" "#include <posix-glob.h>\n")
     file(WRITE "${POSIX_STUBS_DIR}/sys/ioctl.h" "
 #include <posix-sys-ioctl.h>
