@@ -349,7 +349,7 @@ if (PYTHON_EXE)
     add_custom_command(
         OUTPUT ${CMAKE_BINARY_DIR}/fmtargs_generated
         DEPENDS ${REDIS_ROOT}/utils/generate-fmtargs.py
-        COMMAND sed '/Everything/,$$d' fmtargs.h > fmtargs.h.tmp
+        COMMAND ${PYTHON_EXE} -c "import sys; lines = open('fmtargs.h').readlines(); open('fmtargs.h.tmp', 'w').writelines(lines[:lines.index(next(line for line in lines if 'Everything below this line' in line)) + 2])"
         COMMAND ${PYTHON_EXE} ${REDIS_ROOT}/utils/generate-fmtargs.py >> fmtargs.h.tmp
         COMMAND mv fmtargs.h.tmp fmtargs.h
         COMMAND touch ${CMAKE_BINARY_DIR}/fmtargs_generated
