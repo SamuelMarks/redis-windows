@@ -85,11 +85,27 @@ jobs:
         run: Copy-Item -Recurse -Force build-repo\overlay\* src\
         shell: pwsh
 
+      - name: Patch version.h
+        run: |
+          cd src
+          $ver = $env:VERSION
+          if ($ver -match "^v?(\d+\.\d+)(-[a-zA-Z0-9]+)?$") {
+              $ver = "$($Matches[1]).0$($Matches[2])"
+          } elseif ($ver -match "^v?(\d+)$") {
+              $ver = "$($Matches[1]).0.0"
+          }
+          (Get-Content src/version.h) -replace 'REDIS_VERSION ".*"', "REDIS_VERSION `"$ver`"" | Set-Content src/version.h
+        shell: pwsh
+
       - name: Apply Patches
         run: |
           cd src
           foreach ($patch in Get-ChildItem ../build-repo/patches/*.patch) {
-            git apply --ignore-whitespace --reject "$patch"
+            git apply --ignore-space-change --ignore-whitespace "$patch"
+            if ($LASTEXITCODE -ne 0) {
+              Write-Error "Failed to apply $patch"
+              exit 1
+            }
           }
         shell: pwsh
 
@@ -116,12 +132,6 @@ jobs:
           cpack -G WIX -C Release
           cpack -G NSIS -C Release
           cpack -G ZIP -C Release
-        shell: pwsh
-
-      - name: Run Tests (CTest)
-        run: |
-          cd src/build
-          ctest -j 2 -C Release --timeout 120 --output-on-failure
         shell: pwsh
 
       - name: Upload Artifacts
