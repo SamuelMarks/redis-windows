@@ -53,6 +53,8 @@ jobs:
     needs: [check-upstream]
     if: always() && (github.event_name == 'workflow_dispatch' || github.event_name == 'push' || (github.event_name == 'schedule' && needs.check-upstream.outputs.should_build == 'true'))
     runs-on: windows-latest
+    permissions:
+      contents: write
     env:
       PROJECT: ${{ github.event.inputs.project || 'redis' }}
       VERSION: ${{ github.event.inputs.version || needs.check-upstream.outputs.version || github.ref_name }}
