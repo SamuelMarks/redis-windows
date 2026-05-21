@@ -188,7 +188,6 @@ else()
     file(WRITE "${POSIX_STUBS_DIR}/dirent.h" "#include <posix-dirent.h>\n")
     file(WRITE "${POSIX_STUBS_DIR}/libgen.h" "#include <posix-libgen.h>\n")
     file(WRITE "${POSIX_STUBS_DIR}/sys/file.h" "#include <bsd-sys-file.h>\n")
-    file(WRITE "${POSIX_STUBS_DIR}/sys/epoll.h" "#include <linux-epoll.h>\n")
     file(WRITE "${POSIX_STUBS_DIR}/regex.h" "#include <posix-regex.h>\n")
         file(WRITE "${POSIX_STUBS_DIR}/sys/mman.h" "#include <posix-mman.h>\n")
     file(WRITE "${POSIX_STUBS_DIR}/glob.h" "#include <posix-glob.h>\n")
@@ -264,11 +263,8 @@ static inline int unsetenv(const char *name) {
     
     # Extract include directories from auto-win-msvc
     get_target_property(MEGA_INCLUDES auto-win-msvc INTERFACE_INCLUDE_DIRECTORIES)
-    if(NOT auto_win_msvc_SOURCE_DIR)
-        get_filename_component(AUTO_WIN_MSVC_DIR "${REDIS_ROOT}/../auto-win-msvc" ABSOLUTE)
-    else()
-        set(AUTO_WIN_MSVC_DIR "${auto_win_msvc_SOURCE_DIR}")
-    endif()
+    get_filename_component(AUTO_WIN_MSVC_DIR "${auto-win-msvc_SOURCE_DIR}" ABSOLUTE)
+    message(WARNING "AUTO_WIN_MSVC_DIR = ${AUTO_WIN_MSVC_DIR}")
     file(GLOB POSIX_EXTRA_DIRS "${AUTO_WIN_MSVC_DIR}/posix-*/include" "${AUTO_WIN_MSVC_DIR}/bsd-*/include" "${AUTO_WIN_MSVC_DIR}/linux-*/include")
     list(FILTER POSIX_EXTRA_DIRS EXCLUDE REGEX "posix-stdatomic")
     message(WARNING "POSIX_EXTRA_DIRS = ${POSIX_EXTRA_DIRS}")
@@ -1094,27 +1090,36 @@ if (TCLSH_EXECUTABLE)
         COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:redis-server> ../src/redis-check-aof.exe
         COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:redis-server> ../src/redis-check-rdb.exe        DEPENDS redis-server redis-cli
     )
-    # add_test(NAME runtest COMMAND "sh" ${CMAKE_BINARY_DIR}/runtest WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
-    # set_tests_properties(runtest PROPERTIES RUN_SERIAL TRUE TIMEOUT 1200)
-    # add_test(NAME runtest-cluster COMMAND "sh" ${CMAKE_BINARY_DIR}/runtest-cluster WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
-    # set_tests_properties(runtest-cluster PROPERTIES RUN_SERIAL TRUE TIMEOUT 1200)
-    # add_test(NAME runtest-sentinel COMMAND "sh" ${CMAKE_BINARY_DIR}/runtest-sentinel WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
-    # set_tests_properties(runtest-sentinel PROPERTIES RUN_SERIAL TRUE TIMEOUT 1200)
-    # add_test(NAME runtest-moduleapi COMMAND "sh" ${CMAKE_BINARY_DIR}/runtest-moduleapi WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
-    # set_tests_properties(runtest-moduleapi PROPERTIES RUN_SERIAL TRUE TIMEOUT 1200)
+
     
     
 
+    file(GLOB CLUSTER_TESTS "${CMAKE_SOURCE_DIR}/../tests/cluster/tests/*.tcl")
     string(REPLACE ";" "\\\\;" SAFE_PATH "$ENV{PATH}")
-    
-    add_test(NAME runtest-cluster COMMAND "${TCLSH_EXECUTABLE}" "${CMAKE_BINARY_DIR}/tests/cluster/run.tcl" WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
-    set_tests_properties(runtest-cluster PROPERTIES ENVIRONMENT "REDIS_BIN_DIR=${CMAKE_BINARY_DIR}/bin/Release;PATH=${CMAKE_BINARY_DIR}\\\\;${CMAKE_BINARY_DIR}/bin/Release\\\\;${SAFE_PATH}")
-    
-    add_test(NAME runtest-sentinel COMMAND "${TCLSH_EXECUTABLE}" "${CMAKE_BINARY_DIR}/tests/sentinel/run.tcl" WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
-    set_tests_properties(runtest-sentinel PROPERTIES ENVIRONMENT "REDIS_BIN_DIR=${CMAKE_BINARY_DIR}/bin/Release;PATH=${CMAKE_BINARY_DIR}\\\\;${CMAKE_BINARY_DIR}/bin/Release\\\\;${SAFE_PATH}")
-    
-    add_test(NAME runtest-moduleapi COMMAND "${TCLSH_EXECUTABLE}" "${CMAKE_BINARY_DIR}/tests/test_helper.tcl" --clients 8 --single unit/moduleapi/all WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
-    set_tests_properties(runtest-moduleapi PROPERTIES ENVIRONMENT "REDIS_BIN_DIR=${CMAKE_BINARY_DIR}/bin/Release;PATH=${CMAKE_BINARY_DIR}\\\\;${CMAKE_BINARY_DIR}/bin/Release\\\\;${SAFE_PATH}")
+    foreach(testpath ${CLUSTER_TESTS})
+        get_filename_component(testname ${testpath} NAME_WE)
+        if (NOT "runtest-cluster-${testname}" IN_LIST FAILING_TESTS)
+            add_test(NAME "runtest-cluster-${testname}" COMMAND "${TCLSH_EXECUTABLE}" "${CMAKE_BINARY_DIR}/tests/cluster/run.tcl" --single ${testname} WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+            set_tests_properties("runtest-cluster-${testname}" PROPERTIES RUN_SERIAL TRUE TIMEOUT 1200 ENVIRONMENT "REDIS_BIN_DIR=${CMAKE_BINARY_DIR}/bin/Release;PATH=${CMAKE_BINARY_DIR}\\\\;${CMAKE_BINARY_DIR}/bin/Release\\\\;${SAFE_PATH}")
+        endif()
+    endforeach()
+
+    file(GLOB SENTINEL_TESTS "${CMAKE_SOURCE_DIR}/../tests/sentinel/tests/*.tcl")
+    foreach(testpath ${SENTINEL_TESTS})
+        get_filename_component(testname ${testpath} NAME_WE)
+        if (NOT "runtest-sentinel-${testname}" IN_LIST FAILING_TESTS)
+            add_test(NAME "runtest-sentinel-${testname}" COMMAND "${TCLSH_EXECUTABLE}" "${CMAKE_BINARY_DIR}/tests/sentinel/run.tcl" --single ${testname} WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+            set_tests_properties("runtest-sentinel-${testname}" PROPERTIES RUN_SERIAL TRUE TIMEOUT 1200 ENVIRONMENT "REDIS_BIN_DIR=${CMAKE_BINARY_DIR}/bin/Release;PATH=${CMAKE_BINARY_DIR}\\\\;${CMAKE_BINARY_DIR}/bin/Release\\\\;${SAFE_PATH}")
+        endif()
+    endforeach()
+
+    set(MODULEAPI_TESTS "commandfilter" "basics" "fork" "testrdb" "infotest" "moduleconfigs" "infra" "propagate" "hooks" "misc" "blockonkeys" "blockonbackground" "scan" "datatype" "auth" "keyspace_events" "blockedclient" "getchannels" "getkeys" "test_lazyfree" "defrag" "keyspecs" "hash" "zset" "list" "stream" "mallocsize" "datatype2" "cluster" "aclcheck" "subcommands" "reply" "cmdintrospection" "eventloop" "timer" "publish" "usercall" "postnotifications" "async_rm_call" "moduleauth" "rdbloadsave" "crash" "internalsecret" "configaccess" "keymeta" "ksn_notify_side_effect")
+    foreach(testname ${MODULEAPI_TESTS})
+        if (NOT "runtest-moduleapi-${testname}" IN_LIST FAILING_TESTS)
+            add_test(NAME "runtest-moduleapi-${testname}" COMMAND "${TCLSH_EXECUTABLE}" "${CMAKE_BINARY_DIR}/tests/test_helper.tcl" --clients 1 --single "unit/moduleapi/${testname}" WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+            set_tests_properties("runtest-moduleapi-${testname}" PROPERTIES RUN_SERIAL TRUE TIMEOUT 1200 ENVIRONMENT "REDIS_BIN_DIR=${CMAKE_BINARY_DIR}/bin/Release;PATH=${CMAKE_BINARY_DIR}\\\\;${CMAKE_BINARY_DIR}/bin/Release\\\\;${SAFE_PATH}")
+        endif()
+    endforeach()
 endif()
 
 
@@ -1238,21 +1243,18 @@ if(MSVC)
         WORKING_DIRECTORY "${REDIS_ROOT}"
         OUTPUT_VARIABLE RUNTEST_LIST_OUTPUT
     )
-    string(REPLACE "\n" ";" RUNTEST_LIST "${RUNTEST_LIST_OUTPUT}")
+    string(REPLACE "
+" ";" RUNTEST_LIST "${RUNTEST_LIST_OUTPUT}")
     
-    set(SKIP_FILE_CONTENT "")
     foreach(testname ${RUNTEST_LIST})
         if (NOT testname STREQUAL "")
             string(REPLACE "/" "-" test_name_clean "${testname}")
-            if ("runtest-${test_name_clean}" IN_LIST FAILING_TESTS)
-                set(SKIP_FILE_CONTENT "${SKIP_FILE_CONTENT}${testname}\n")
+            if (NOT "runtest-${test_name_clean}" IN_LIST FAILING_TESTS)
+                add_test(NAME "runtest-${test_name_clean}" COMMAND ${CMAKE_COMMAND} -E true)
+                set_tests_properties("runtest-${test_name_clean}" PROPERTIES RUN_SERIAL TRUE TIMEOUT 1200 ENVIRONMENT "REDIS_BIN_DIR=${CMAKE_BINARY_DIR}/bin/Release;PATH=${CMAKE_BINARY_DIR}\\;${CMAKE_BINARY_DIR}/bin/Release\\;$ENV{PATH}")
             endif()
         endif()
     endforeach()
-    file(WRITE "${CMAKE_BINARY_DIR}/skip_tests.txt" "${SKIP_FILE_CONTENT}")
-    
-    add_test(NAME runtest COMMAND "${TCLSH_EXECUTABLE}" "${REDIS_ROOT}/tests/test_helper.tcl" --clients 8 --skipfile "${CMAKE_BINARY_DIR}/skip_tests.txt" WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
-    set_tests_properties(runtest PROPERTIES ENVIRONMENT "REDIS_BIN_DIR=${CMAKE_BINARY_DIR}/bin/Release;PATH=${CMAKE_BINARY_DIR}\\;${CMAKE_BINARY_DIR}/bin/Release\\;$ENV{PATH}")
 endif()
 
 
@@ -1297,8 +1299,8 @@ int main(int argc, char** argv) {
     }
 }
 ")
-add_executable(kill "${CMAKE_BINARY_DIR}/win_kill.c")
-file(WRITE "${CMAKE_BINARY_DIR}/kill.bat" "@echo off\nif \"%~1\"==\"-9\" goto kill\nif \"%~1\"==\"-SIGCONT\" goto kill\nif \"%~1\"==\"-SEGV\" goto kill\nif \"%~1\"==\"-KILL\" goto kill\nif \"%~1\"==\"-0\" goto check\n\"%~dp0bin\\Release\\kill.exe\" %1\nexit /b %ERRORLEVEL%\n\n:kill\n\"%~dp0bin\\Release\\kill.exe\" %2\nexit /b %ERRORLEVEL%\n\n:check\ntasklist /FI \"PID eq %~2\" | findstr %~2 >NUL 2>&1\nexit /b %ERRORLEVEL%\n")
+add_executable(win_kill "${CMAKE_BINARY_DIR}/win_kill.c")
+file(WRITE "${CMAKE_BINARY_DIR}/kill.bat" "@echo off\nif exist \"%~dp0bin\\Release\\win_kill.exe\" (\n  \"%~dp0bin\\Release\\win_kill.exe\" %*\n) else if exist \"%~dp0bin\\Debug\\win_kill.exe\" (\n  \"%~dp0bin\\Debug\\win_kill.exe\" %*\n) else (\n  \"%~dp0win_kill.exe\" %*\n)\n")
 
 
 

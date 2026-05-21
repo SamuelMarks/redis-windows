@@ -1,4 +1,4 @@
-﻿diff --git a/deps/tre/lib/xmalloc.c b/deps/tre/lib/xmalloc.c
+diff --git a/deps/tre/lib/xmalloc.c b/deps/tre/lib/xmalloc.c
 index 637235d8d..4179d7c03 100644
 --- a/deps/tre/lib/xmalloc.c
 +++ b/deps/tre/lib/xmalloc.c
@@ -85,6 +85,15 @@ index 38a6ad388..9843e6ccc 100644
          if (ctx.module) {
              moduleUnregisterCleanup(ctx.module);
              moduleRemoveCateogires(ctx.module);
+diff --git a/src/version.h b/src/version.h
+index 141634ddf..89aef53fc 100644
+--- a/src/version.h
++++ b/src/version.h
+@@ -1,2 +1,2 @@
+-#define REDIS_VERSION "8.7.240"
+-#define REDIS_VERSION_NUM 0x000807f0
++#define REDIS_VERSION "255.255.255"
++#define REDIS_VERSION_NUM 0x00ffffff
 diff --git a/tests/unit/cluster/slot-stats.tcl b/tests/unit/cluster/slot-stats.tcl
 index 004351369..2724ed519 100644
 --- a/tests/unit/cluster/slot-stats.tcl

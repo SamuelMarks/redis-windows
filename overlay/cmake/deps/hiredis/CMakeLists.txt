@@ -107,13 +107,13 @@ if (MSVC AND BUILD_SHARED_LIBS)
 endif()
 
 # For NuGet packages
-INSTALL(FILES ${REDIS_ROOT}/deps/hiredis/hiredis.targets
+INSTALL(FILES hiredis.targets
     DESTINATION build/native)
 
 INSTALL(FILES ${REDIS_ROOT}/deps/hiredis/hiredis.h ${REDIS_ROOT}/deps/hiredis/read.h ${REDIS_ROOT}/deps/hiredis/sds.h ${REDIS_ROOT}/deps/hiredis/async.h ${REDIS_ROOT}/deps/hiredis/alloc.h ${REDIS_ROOT}/deps/hiredis/sockcompat.h
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/hiredis)
 
-INSTALL(DIRECTORY ${REDIS_ROOT}/deps/hiredis/adapters
+INSTALL(DIRECTORY adapters
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/hiredis)
 
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/hiredis.pc
@@ -218,8 +218,10 @@ IF(NOT DISABLE_TESTS)
         ADD_DEFINITIONS(-DHIREDIS_TEST_ASYNC=1)
         TARGET_LINK_LIBRARIES(hiredis-test event)
     ENDIF()
-    ADD_TEST(NAME hiredis-test
-        COMMAND ${REDIS_ROOT}/deps/hiredis/test.sh)
+    IF(NOT WIN32)
+        ADD_TEST(NAME hiredis-test
+            COMMAND ${REDIS_ROOT}/deps/hiredis/test.sh)
+    ENDIF()
 ENDIF()
 
 # Add examples

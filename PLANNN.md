@@ -24,7 +24,7 @@ The `redis-windows` repository manages the build system by overlaying its own `c
 
 1. **Copy CMake Files:**
    Copy the `cmake/` folder from the working `..\redis` repository and replace the contents of `redis-windows\overlay\cmake\`.
-2. **Copy Tcl Overlays (If Applicable):**
+2. [x] **Copy Tcl Overlays (If Applicable):**
    If `exec_override.tcl` or other scripts were modified in `..\redis`, ensure they are updated in `redis-windows\overlay\`.
 
 ## Phase 4: Clean Local Verification
