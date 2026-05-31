@@ -85,7 +85,7 @@ for %%f in ("%REPO_DIR%patches\*.patch") do (
 
 echo Configuring CMake...
 :: Try MSVC 2026 first, fallback to default if not available
-cmake -G "Visual Studio 18 2026" -A x64 -B build -S cmake
+cmake -G "Visual Studio 17 2022" -A x64 -B build -S cmake
 if errorlevel 1 (
     cmake -B build -S cmake
     if errorlevel 1 (
