@@ -264,7 +264,7 @@ static inline int unsetenv(const char *name) {
     
     # Extract include directories from auto-win-msvc
     get_target_property(MEGA_INCLUDES auto-win-msvc INTERFACE_INCLUDE_DIRECTORIES)
-    get_filename_component(AUTO_WIN_MSVC_DIR "${auto-win-msvc_SOURCE_DIR}" ABSOLUTE)
+    get_filename_component(AUTO_WIN_MSVC_DIR "${auto_win_msvc_SOURCE_DIR}" ABSOLUTE)
     message(WARNING "AUTO_WIN_MSVC_DIR = ${AUTO_WIN_MSVC_DIR}")
     file(GLOB POSIX_EXTRA_DIRS "${AUTO_WIN_MSVC_DIR}/posix-*/include" "${AUTO_WIN_MSVC_DIR}/bsd-*/include" "${AUTO_WIN_MSVC_DIR}/linux-*/include")
     list(FILTER POSIX_EXTRA_DIRS EXCLUDE REGEX "posix-stdatomic")
