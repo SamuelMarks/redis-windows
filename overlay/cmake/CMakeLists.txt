@@ -25,6 +25,7 @@ project("redis")
 
 include(FetchContent)
 if(EXISTS "${REDIS_ROOT}/../auto-win-msvc")
+    set(FETCHCONTENT_SOURCE_DIR_AUTO_WIN_MSVC "${REDIS_ROOT}/../auto-win-msvc" CACHE PATH "")
     FetchContent_Declare(
         auto_win_msvc
         SOURCE_DIR "${REDIS_ROOT}/../auto-win-msvc"
@@ -1302,6 +1303,7 @@ int main(int argc, char** argv) {
 ")
 add_executable(win_kill "${CMAKE_BINARY_DIR}/win_kill.c")
 file(WRITE "${CMAKE_BINARY_DIR}/kill.bat" "@echo off\nif exist \"%~dp0bin\\Release\\win_kill.exe\" (\n  \"%~dp0bin\\Release\\win_kill.exe\" %*\n) else if exist \"%~dp0bin\\Debug\\win_kill.exe\" (\n  \"%~dp0bin\\Debug\\win_kill.exe\" %*\n) else (\n  \"%~dp0win_kill.exe\" %*\n)\n")
+
 
 
 
