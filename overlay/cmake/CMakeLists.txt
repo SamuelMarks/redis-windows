@@ -1,6 +1,6 @@
 set(REDIS_ROOT "${CMAKE_SOURCE_DIR}/..")
-cmake_minimum_required(VERSION 3.10)
-cmake_policy(SET CMP0135 OLD)
+cmake_minimum_required(VERSION 3.24)
+cmake_policy(SET CMP0135 NEW)
 
 # Must be done first
 if (APPLE)
@@ -25,7 +25,6 @@ project("redis")
 
 include(FetchContent)
 if(EXISTS "${REDIS_ROOT}/../auto-win-msvc")
-    set(FETCHCONTENT_SOURCE_DIR_AUTO_WIN_MSVC "${REDIS_ROOT}/../auto-win-msvc" CACHE PATH "")
     FetchContent_Declare(
         auto_win_msvc
         SOURCE_DIR "${REDIS_ROOT}/../auto-win-msvc"
