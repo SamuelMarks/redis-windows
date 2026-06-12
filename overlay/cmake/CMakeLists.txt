@@ -41,6 +41,7 @@ else()
         auto_win_msvc
         GIT_REPOSITORY https://github.com/SamuelMarks/auto-win-msvc.git
         GIT_TAG        master
+        GIT_SUBMODULES ""
     )
 endif()
 FetchContent_MakeAvailable(auto_win_msvc)
