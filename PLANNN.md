@@ -1,66 +1,57 @@
-# Release Plan: Redis 8.8-rc1 for Windows (MSVC)
+# Release Plan: Redis 8.10.1 for Windows (MSVC)
 
-This document outlines the systematic process to bring the recent local fixes from `..\auto-win-msvc` and `..\redis` into this repository (`redis-windows`), verify that all tests pass natively on Windows MSVC, and cut a new tagged release (8.8-rc1) with the resulting executables and packages.
+This document outlines the systematic process to bring the recent local fixes from `..\auto-win-msvc` and `..\redis` into this repository (`redis-windows`), verify that all tests pass natively on Microsoft Windows running MSVC for the `8.10.1` tag, and cut a new tagged release with the resulting executables and packages.
 
-## Phase 1: Publish Upstream POSIX Compatibility Updates
-Our MSVC build relies heavily on the `auto-win-msvc` POSIX compatibility layer. Recent fixes (such as C89 compliance, `posix-core.h` updates, and IO behavior fixes) are currently only in the local clone of `auto-win-msvc`.
+## [x] Phase 1: Publish `auto-win-msvc` Updates
+Our native MSVC build relies on the `auto-win-msvc` POSIX compatibility layer. Recent fixes in the local clone need to be published so the `redis-windows` build system can pull them dynamically during the build process.
 
-1. **Commit Local Changes in `auto-win-msvc`:**
-   Ensure all working files in `..\auto-win-msvc` are committed.
-2. **Push to Origin:**
-   Push the changes to `origin/master`. The `redis-windows` build system pulls `auto-win-msvc` dynamically via CMake's `FetchContent` during the build process, so pushing these changes is a strict prerequisite.
+- [x] **Commit & Push Local Changes:**
+   Ensure all working files in `..\auto-win-msvc` are committed and pushed to `origin/master`. This ensures the automated build has the latest compatibility fixes required for 8.10.1.
 
-## Phase 2: Extract Patches from Local `redis`
-The local `..\redis` repository has all tests passing natively on Windows, achieved via source code adjustments and Tcl test workarounds (e.g., swapping `taskkill` for `win_kill`). We need to extract these differences as patches.
+## [x] Phase 2: Extract 8.10.1 Patches from Local `redis`
+The local `..\redis` repository has all tests successfully passing natively on Windows for Redis 8.10.1. We need to extract these code adjustments and test workarounds as reusable patches.
 
-1. **Generate the Unified Diff:**
-   In `..\redis`, generate a clean patch comparing the local branch against the standard `8.8-rc1` tag. 
-   *(Note: Exclude changes to the `cmake/` folder as those are managed via overlays).*
-2. **Update the Patches Directory:**
-   Copy the generated patch(es) into `redis-windows\patches\`. This will likely involve updating or replacing existing patches like `server.patch` or `tcl_hang.patch`.
+- [x] **Generate Unified Diffs:**
+   In `..\redis`, generate clean patches comparing the local working branch against the standard `8.10.1` tag. 
+   *(Note: Exclude changes to the `cmake/` folder as those are managed via our overlays).*
+- [x] **Update the Patches Directory:**
+   Copy the generated patch(es) into `redis-windows\patches\`. This replaces any old patches and ensures clean application over vanilla Redis 8.10.1.
 
-## Phase 3: Sync the CMake Overlays
-The `redis-windows` repository manages the build system by overlaying its own `cmake/` folder on top of the upstream source.
+## [x] Phase 3: Sync the CMake Overlays
+The `redis-windows` repository injects its own `cmake/` folder on top of the upstream source. 
 
-1. **Copy CMake Files:**
-   Copy the `cmake/` folder from the working `..\redis` repository and replace the contents of `redis-windows\overlay\cmake\`.
-2. [x] **Copy Tcl Overlays (If Applicable):**
-   If `exec_override.tcl` or other scripts were modified in `..\redis`, ensure they are updated in `redis-windows\overlay\`.
+- [x] **Sync CMake Files:**
+   Copy the updated `cmake/` directory from the working `..\redis` repository into `redis-windows\overlay\cmake\`.
+- [x] **Sync Test Overlays:**
+   If there were modifications to Tcl scripts (like `exec_override.tcl`) in `..\redis` to get the tests passing, ensure those are copied to the appropriate location under `redis-windows\overlay\`.
 
-## Phase 4: Clean Local Verification
-Before pushing, we must verify that the patches and overlays apply cleanly to a fresh copy of Redis 8.8-rc1 and that all tests pass.
+## [x] Phase 4: Clean Local Verification
+Before publishing, we must verify that our extracted patches and overlays apply cleanly to a fresh checkout of Redis 8.10.1 and pass all tests.
 
-1. **Run the Build Script:**
-   Execute the local build script to pull `8.8-rc1` upstream, apply overlays and patches, build, and run tests.
+- [x] **Test the Build Flow:**
+   Check out `8.10.1` upstream in a temporary location, apply the contents of `overlay\`, apply the scripts in `patches\`, and configure with CMake.
+- [x] **Validate Tests:**
+   Compile with MSVC and run the test suite (`ctest` or Tcl tests) locally to confirm 100% test success on Windows, ensuring no regressions.
+
+## [x] Phase 5: CI/CD Pipeline and Tagging
+Once the local build and tests are verified, we update the main repository and trigger the release pipeline.
+
+- [x] **Commit to `redis-windows`:**
+   Stage all updated files in `patches\`, `overlay\`, and `PLANNN.md`. Commit these changes.
+- [x] **Tag the Release:**
+   Tag the repository to match the upstream version:
    ```cmd
-   .\build-and-release.bat 8.8-rc1 redis --local-only
-   ```
-2. **Validate Test Output:**
-   Ensure CMake configures successfully, MSVC compiles without fatal errors, and `ctest` reports 100% test success. If tests hang or fail, debug locally, adjust the patches in `redis-windows\patches\`, and repeat.
-
-## Phase 5: CI Configuration and Tagging
-Once the local build is green, it's time to push to GitHub and trigger the CI release pipeline.
-
-1. **Commit to `redis-windows`:**
-   Stage all updated files in `patches\`, `overlay\`, and this `PLANNN.md`. Commit these changes.
-2. **Push to Master:**
-   Push the commit to the `master` or main branch of `redis-windows`.
-3. **Tag the Release:**
-   Create a Git tag matching the upstream RC version:
-   ```cmd
-   git tag 8.8-rc1
-   git push origin 8.8-rc1
+   git tag 8.10.1
+   git push origin 8.10.1
    ```
 
 ## Phase 6: Release and Packaging Validation
-The Git tag push will automatically trigger the `.github/workflows/release.yml` GitHub Actions pipeline.
+Pushing the `8.10.1` tag will automatically trigger the `.github/workflows/release.yml` GitHub Actions pipeline.
 
-1. **Monitor the Pipeline:**
-   Watch the GitHub Actions run to ensure the Windows build runner correctly checks out `8.8-rc1`, applies the new patches, fetches the updated `auto-win-msvc`, builds, and runs the tests.
-2. **Verify the Release Artifacts:**
-   Once CI completes, navigate to the GitHub Releases page for `redis-windows`. Verify that a new release for `8.8-rc1` exists and contains the expected artifacts:
+1. **Monitor the CI Pipeline:**
+   Watch the GitHub Actions run to ensure it correctly checks out `8.10.1`, applies the updated patches/overlays, builds with MSVC, and packages the results.
+2. **Verify Release Artifacts:**
+   Once the pipeline completes, navigate to the GitHub Releases page for `redis-windows`. Verify that the `8.10.1` release contains:
    - `redis-server.exe` / `redis-cli.exe`
    - Windows Installer (`.msi`)
    - Release archive (`.zip`)
-
-By following these steps, we ensure a reproducible, automated process for bringing upstream Redis native Windows compatibility directly to end users.
