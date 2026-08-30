@@ -2,7 +2,7 @@
 setlocal EnableDelayedExpansion
 
 if "%~1"=="" (
-    echo Usage: %0 ^<tag^> [project] [--local-only] [--hash ^<git-hash^>]
+    echo Usage: %0 ^<tag^> [project] [--local-only] [--hash ^<git-hash^>] [--msvc ^<version^>]
     echo Example: %0 unstable redis
     echo Example: %0 8.0.0 valkey --local-only
     echo Example: %0 8.0.0 redis --hash a1b2c3d
@@ -13,6 +13,7 @@ set TAG=%~1
 set PROJECT=redis
 set LOCAL_ONLY=0
 set GIT_HASH=
+set MSVC_VER=
 
 :parse_args
 shift
@@ -23,6 +24,11 @@ if "%~1"=="--local-only" (
 )
 if "%~1"=="--hash" (
     set GIT_HASH=%~2
+    shift
+    goto parse_args
+)
+if "%~1"=="--msvc" (
+    set MSVC_VER=%~2
     shift
     goto parse_args
 )
@@ -84,8 +90,17 @@ for %%f in ("%REPO_DIR%patches\*.patch") do (
 )
 
 echo Configuring CMake...
-:: Try MSVC 2026 first, fallback to default if not available
-cmake -G "Visual Studio 17 2022" -A x64 -B build -S cmake
+if "!MSVC_VER!"=="2022" (
+    cmake -G "Visual Studio 17 2022" -A x64 -B build -S cmake
+) else if "!MSVC_VER!"=="2026" (
+    cmake -G "Visual Studio 18 2026" -A x64 -B build -S cmake
+) else (
+    :: Try MSVC 2026 first, fallback to MSVC 2022 if not available
+    cmake -G "Visual Studio 18 2026" -A x64 -B build -S cmake
+    if errorlevel 1 (
+        cmake -G "Visual Studio 17 2022" -A x64 -B build -S cmake
+    )
+)
 if errorlevel 1 (
     cmake -B build -S cmake
     if errorlevel 1 (
